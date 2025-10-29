@@ -22,7 +22,7 @@ interface User {
 
 // message in Channel
 
-router.post("/", async (req: Request<Message>, res: Response<OperationResult<Message> | ErrorResponse>) => {
+router.post("/:id", async (req: Request<Message>, res: Response<OperationResult<Message> | ErrorResponse>) => {
   
     
     let validateResualt = messageSchema.safeParse(req.body)
@@ -63,6 +63,10 @@ router.post("/", async (req: Request<Message>, res: Response<OperationResult<Mes
       })
     }
 })
+
+// message user to user
+
+
 
 
 
