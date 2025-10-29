@@ -5,7 +5,7 @@ import { db, myTable } from "../data/db.js";
 import { UserSchema } from "../data/validation.js"
 import type { ErrorResponse, OperationResult } from "../data/types.js";
 
-const router: Router = express.Router();
+const router: Router = express.Router()
 
 interface User {
   pk: string;
@@ -13,30 +13,27 @@ interface User {
   name: string;
 }
 
-interface UserName {
-  name: string;
-}
 
 // Create new user
 router.post("/", async (req: Request<User>, res: Response<OperationResult<User> | ErrorResponse>) => {
+  let validationResult = UserSchema.safeParse(req.body); // validate input data
+  
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((err) => ({
+      field: err.path.join("."),
+      message: err.message,
+    }));
+    // if validation fails
+    return res.status(400).send({
+      success: false,
+      message: "Invalid user data",
+      error: errors,
+    });
+  }
+  
+  const newUser: User = validationResult.data; // get validated data
+  
   try {
-    let validationResult = UserSchema.safeParse(req.body); // validate input data
-
-    if (!validationResult.success) {
-      const errors = validationResult.error.issues.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
-      // if validation fails
-      return res.status(400).send({
-        success: false,
-        message: "Invalid user data",
-        error: errors,
-      });
-    }
-
-    const newUser: User = validationResult.data; // get validated data
-
     await db.send(
       new PutCommand({
         TableName: myTable,
@@ -58,7 +55,9 @@ router.post("/", async (req: Request<User>, res: Response<OperationResult<User> 
   }
 })
 
-
+// crate radom guest
+//lägg den nog i zustands
+// då kanske man inte behöver en JWT för Guest i localStorage
 
 
 export default router
