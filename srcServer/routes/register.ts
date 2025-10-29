@@ -16,6 +16,8 @@ interface User {
 
 // Create new user
 router.post("/", async (req: Request<User>, res: Response<OperationResult<User> | ErrorResponse>) => {
+
+  //TODO: put valdiaton as middleware?
   let validationResult = UserSchema.safeParse(req.body); // validate input data
   
   if (!validationResult.success) {

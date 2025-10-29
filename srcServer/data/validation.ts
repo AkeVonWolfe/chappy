@@ -24,6 +24,7 @@ const UserSchema = z.object({
     }),
 })
 
+// TODO: move over validaton to middle ware ?
 const IdSchema = z
   .number({
     message: "Id must be a number.",

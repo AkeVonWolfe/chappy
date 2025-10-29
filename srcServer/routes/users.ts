@@ -18,7 +18,7 @@ interface User {
 router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>) => {
   try {
     const result: GetResult = await db.send(
-      new ScanCommand({
+      new ScanCommand({  //TODO: Change to queary due to message gonna flood DB
         // ScanCommand to get entire table
         TableName: myTable,
         FilterExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)", // filter for users only
@@ -28,7 +28,7 @@ router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>
         },
       })
     )
-
+     // TODO: do I need to repeat this?
     res.status(200).send({
       success: true,
       count: result.Count ?? 0,

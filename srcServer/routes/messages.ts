@@ -24,7 +24,7 @@ interface User {
 
 router.post("/:id", async (req: Request<Message>, res: Response<OperationResult<Message> | ErrorResponse>) => {
   
-    
+     // TODO : put valdiaton as middleware?
     let validateResualt = messageSchema.safeParse(req.body)
     
     if (!validateResualt.success) {

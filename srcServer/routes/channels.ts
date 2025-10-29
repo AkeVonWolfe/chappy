@@ -18,7 +18,7 @@ interface Channel {
 router.get("/", async (req, res: Response<SuccessResponse<Channel> | ErrorResponse>) => {
   try {
     const result: GetResult = await db.send(
-      new ScanCommand({
+      new ScanCommand({  //TODO: change to queary due to flood of message in DB
         // ScanCommand to get entire table
         TableName: myTable,
         FilterExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)", // filter for channels only
@@ -29,6 +29,7 @@ router.get("/", async (req, res: Response<SuccessResponse<Channel> | ErrorRespon
       })
     )
 
+     // TODO: do I need to repeat this?
     res.status(200).send({
       success: true,
       count: result.Count ?? 0,

@@ -11,7 +11,7 @@ function CreateJWTtoken(userId: string, guest: boolean) {
         },
         JWT_SECRET,
         { expiresIn: '30m' }
-    );
+    )
 }
 
 
