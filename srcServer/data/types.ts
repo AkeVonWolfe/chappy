@@ -22,7 +22,18 @@ export type ErrorResponse = {
   success: boolean;
   message: string;
   error: string | Error[];
+
 };
+// for login response
+export type LoginResponse<T> = {
+  success: true;
+  message: string;
+  token: string;
+  user: {
+    userId: string;
+    name: string;
+  };
+}
 
 export type GetResult = Record<string, any> | undefined;
 

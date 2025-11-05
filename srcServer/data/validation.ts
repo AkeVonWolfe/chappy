@@ -83,25 +83,15 @@ const messageSchema = z.object({
    })
 })
 const UserRegistrationSchema = z.object({
-  pk: z
-    .string({
-      message: "The primary key (pk) must be a string.",
-    })
-    .min(1, {
-      message: "The primary key (pk) is required.",
-    })
-    .regex(/^USER#u\d+$/, {
-      message: "The primary key (pk) must start with 'USER#' followed by a number (e.g., 'USER#123').",
-    }),
-  sk: z.literal("META", {
-    message: "The Sort key (sk) must be exactly 'META'.",
-  }),
   name: z
     .string({
       message: "Name must be a string.",
     })
     .min(1, {
       message: "Name is required.",
+    })
+    .max(100, {
+      message: "Name must be at most 100 characters long.",
     }),
   password: z
     .string({
@@ -113,10 +103,6 @@ const UserRegistrationSchema = z.object({
     .max(100, {
       message: "Password must be at most 100 characters long.",
     }),
-  Guest: z.boolean({
-    message: "Guest must be a boolean value.",
-  }).optional(),
-
 })
 
 const ChannelCreateSchema = z.object({

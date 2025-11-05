@@ -13,6 +13,6 @@ const client: DynamoDBClient = new DynamoDBClient({
 });
 
 const db: DynamoDBDocumentClient = DynamoDBDocumentClient.from(client);
-const myTable: string = "group-table";
+const myTable: string = "chappy";
 
 export { db, myTable };

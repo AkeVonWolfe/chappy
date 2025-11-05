@@ -1,18 +1,15 @@
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET: string = process.env.JWT_SECRET || 'your_jwt_secret';
 
-function CreateJWTtoken(userId: string, guest: boolean) {
-
-    return jwt.sign(
-        {
-            userId: userId,
-            guest: guest,
-        },
-        JWT_SECRET,
-        { expiresIn: '30m' }
-    )
+export const createToken = (payload: object, expiresIn = '1h') => {
+  return (jwt as any).sign(payload, JWT_SECRET, { expiresIn })
 }
 
-
-export { CreateJWTtoken }
+export const verifyToken = (token: string) => {
+  try {
+    return (jwt as any).verify(token, JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+}
