@@ -7,31 +7,31 @@ import type { ErrorResponse, OperationResult } from "../data/types.js";
 import { genSalt, hash } from 'bcrypt'
 import { randomUUID } from "crypto";
 
-const router: Router = express.Router();
+const router: Router = express.Router()
 
 interface User {
-  pk: string;
-  sk: string;
-  name: string;
-  password: string;
-  Guest: boolean;
+  pk: string
+  sk: string
+  name: string
+  password: string
+  Guest: boolean
 }
 
 interface UserRegistrationInput {
-  name: string;
-  password: string;
+  name: string
+  password: string
 }
 
 interface UserResponse {
-  pk: string;
-  sk: string;
-  name: string;
-  Guest: boolean;
+  pk: string
+  sk: string
+  name: string
+  Guest: boolean
 }
 
 // Generate a unique user ID
 function generateUserId(): string {
-  return randomUUID();
+  return randomUUID()
 }
 
 // User registration
@@ -43,13 +43,13 @@ router.post( "/", async (req: Request,res: Response<OperationResult<UserResponse
       const errors = validationResult.error.issues.map((err) => ({
         field: err.path.join("."),
         message: err.message,
-      }));
+      }))
 
       return res.status(400).send({
         success: false,
         message: "Invalid user data",
         error: errors,
-      });
+      })
     }
 
     const { name, password }: UserRegistrationInput = validationResult.data
@@ -64,19 +64,19 @@ router.post( "/", async (req: Request,res: Response<OperationResult<UserResponse
 
       // Create user object
       const newUser: User = {
-        pk: `USER#${userId}`,
-        sk: "META",
+        pk: "USERS",
+        sk: `USERS#${userId}`,
         name,
         password: hashedPassword,
         Guest: false,
-      };
+      }
 
       // Save to database
       await db.send(
         new PutCommand({
           TableName: myTable,
           Item: newUser,
-          ConditionExpression: "attribute_not_exists(pk)", // Prevent overwriting
+          ConditionExpression: "attribute_not_exists(sk)", // Prevent overwriting
         })
       )
 
@@ -104,7 +104,7 @@ router.post( "/", async (req: Request,res: Response<OperationResult<UserResponse
       }
 
       // Generic error
-      console.error("Error creating user:", error);
+      console.error("Error creating user:", error)
       return res.status(500).send({
         success: false,
         message: "Failed to create user",

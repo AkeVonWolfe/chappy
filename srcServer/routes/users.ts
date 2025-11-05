@@ -5,13 +5,13 @@ import { db, myTable } from "../data/db.js";
 import type { ErrorResponse, OperationResult, SuccessResponse, IdParam, GetResult } from "../data/types.js"
 
 
-const router: Router = express.Router();
+const router: Router = express.Router()
 
 
 interface User {
-    pk: string;
-    sk: string;
-    name: string;
+    pk: string
+    sk: string
+    name: string
 }
 
 // Get all users
@@ -21,10 +21,10 @@ router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>
       new QueryCommand({  //TODO: Change to queary due to message gonna flood DB
         // ScanCommand to get entire table
         TableName: myTable,
-        FilterExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)", // filter for users only
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)", // filter for users only
         ExpressionAttributeValues: {
-          ":userPrefix": "USER", // all users have pk starting with "user"
-          ":meta": "META", // all user meta have sk "meta"
+          ":pk": "USERS",
+          ":skPrefix": "META",
         },
       })
     )
@@ -53,8 +53,8 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
       new DeleteCommand({
         TableName: myTable,
         Key: {
+          sk: "USERS",
           pk: `USER#${userId}`,
-          sk: "META",
         },
         ConditionExpression: "attribute_exists(pk)",
         ReturnValues: "ALL_OLD",
@@ -79,19 +79,24 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
 
 // Login user
 router.post("/login", async (req: Request<User>, res: Response<OperationResult<User> | ErrorResponse>) => {
-  const { pk, password } = req.body
+  const { userId, name, password } = req.body
   try {
     const result = await db.send(
       new UpdateCommand({
         TableName: myTable,
-        Key: { pk, password },
+        Key: {
+          pk: "USERS",
+          sk: `USER#${userId}`,
+        },
         UpdateExpression: "SET #name = :name",
         ExpressionAttributeNames: {
           "#name": "name",
         },
         ExpressionAttributeValues: {
-          ":name": req.body.name,
+          ":name": name,
+          ":password": password,
         },
+        ConditionExpression: "attribute_exists(pk) AND password = :password",
         ReturnValues: "ALL_NEW",
       })
     )
