@@ -109,9 +109,14 @@ const UserRegistrationSchema = z.object({
   Guest: z.boolean({
     message: "Guest must be a boolean value.",
   }).optional(),
-  
+
+})
+
+const ChannelCreateSchema = z.object({
+  name: z.string().min(1).max(100),
+  userId: z.string(), // Temporary - remove when auth middleware is added
 })
 
 
 
-export { UserSchema, IdSchema, messageSchema, UserRegistrationSchema }
+export { UserSchema, IdSchema, messageSchema, UserRegistrationSchema, ChannelCreateSchema }

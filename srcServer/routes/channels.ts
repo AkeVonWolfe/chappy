@@ -1,40 +1,83 @@
-import { ScanCommand, DeleteCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
 import type { ErrorResponse, OperationResult, SuccessResponse, IdParam, GetResult } from "../data/types.js"
+import { randomUUID } from "crypto";
+import { ChannelCreateSchema } from "../data/validation.js";
 
 
-const router: Router = express.Router();
+const router: Router = express.Router()
 
 
 interface Channel {
-    pk: string;
-    sk: string;
-    name: string;
+  pk: string
+  sk: string
+  name: string
+  owner: string
 }
 
-// Get all channels
-router.get("/", async (req, res: Response<SuccessResponse<Channel> | ErrorResponse>) => {
+interface ChannelCreateInput {
+  name: string
+  userId: string
+}
+
+interface ChannelResponse {
+  id: string
+  name: string
+  ownerId: string
+}
+
+// Generate a unique channel ID
+function generateChannelId(): string {
+  return randomUUID()
+}
+
+// Convert Channel to ChannelResponse
+function toChannelResponse(channel: Channel): ChannelResponse {
+  return {
+    id: channel.sk.replace("CHANNEL#", ""),
+    name: channel.name,
+    ownerId: channel.owner.replace("USER#", ""),
+  }
+}
+
+// get all channels
+router.get("/", async (req, res: Response<SuccessResponse<ChannelResponse> | ErrorResponse>) => {
   try {
+    // Use Query to get all channels with pk = "CHANNELS"
     const result: GetResult = await db.send(
       new QueryCommand({
         TableName: myTable,
-        KeyConditionExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)",
+        KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: {
-          ":userPrefix": "CHANNEL", // all channels have pk starting with "CHANNEL"
-          ":meta": "USER", // all channels meta have sk "USER"
+          ":pk": "CHANNELS",
         },
       })
     )
 
-     // TODO: do I need to repeat this?
+    // interface to prevent from being Any
+    interface DBItem {
+      pk: string
+      sk: string
+      name?: string
+      owner?: string
+      [key: string]: unknown
+    }
+
+    const rawItems: DBItem[] = (result.Items ?? []) as DBItem[]
+
+    const channels: ChannelResponse[] = rawItems.map((item: DBItem) =>
+      toChannelResponse(item as Channel)
+    )
+
     res.status(200).send({
       success: true,
-      count: result.Count ?? 0,
-      items: result.Items ?? [],
+      count: channels.length,
+      items: channels,
     })
   } catch (error) {
+    console.error("Error fetching channels:", error)
     res.status(500).send({
       success: false,
       error: (error as Error).message,
@@ -43,94 +86,39 @@ router.get("/", async (req, res: Response<SuccessResponse<Channel> | ErrorRespon
   }
 })
 
-
-// DELETE Channel by id
-router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<Channel> | ErrorResponse>) => {
+// get channel by id
+router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
   try {
-    const channelId : number = req.params.id;
+    const channelId = req.params.id
 
+    // Use GetCommand since we know both pk and sk
     const result = await db.send(
-      new DeleteCommand({
+      new GetCommand({
         TableName: myTable,
         Key: {
-          pk: `CHANNEL#${channelId}`,
-          sk: "USER", // need to get this from auth in future
+          pk: "CHANNELS",
+          sk: `CHANNEL#${channelId}`,
         },
-        ConditionExpression: "attribute_exists(pk)",
-        ReturnValues: "ALL_OLD",
-      })
-    );
-
-    const channelUser: Channel = result.Attributes as Channel;
-
-    res.status(200).send({
-      success: true,
-      message: "Channel deleted successfully",
-      item: channelUser,
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      error: (error as Error).message,
-      message: "Failed to delete Channel",
-    })
-  }
-})
-
-// create Channel
-router.post("/", async (req: Request<Channel>, res: Response<OperationResult<Channel> | ErrorResponse>) => {
-  const newChannel: Channel = req.body;
-  try {
-    await db.send(
-      new PutCommand({
-        TableName: myTable,
-        Item: newChannel,
       })
     )
-    res.status(201).send({
-      success: true,
-      message: "Channel created successfully",
-      item: newChannel,
-    })
-  } catch (error) {   
-    res.status(500).send({
-      success: false,
-      error: (error as Error).message,
-      message: "Failed to create channel",
-    })
-  }
-})
 
-// get channel by id
-router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<Channel> | ErrorResponse>) => {
-  try {
-    const channelId: number = req.params.id;
-    const result = await db.send(
-      new QueryCommand({
-        TableName: myTable,
-        KeyConditionExpression: "pk = :pk AND sk = :sk",
-        ExpressionAttributeValues: {
-          ":pk": `CHANNEL#${channelId}`,
-          ":sk": "USER",
-        }
-      })
-    );
-    const channel: Channel | undefined = result.Items ? (result.Items[0] as Channel) : undefined;
+    const channel: Channel | undefined = result.Item as Channel | undefined
+
     if (!channel) {
-
       return res.status(404).send({
         success: false,
-        error: Error("Channel not found").message,
+        error: "Channel not found",
         message: "Channel not found",
       })
     }
+
     res.status(200).send({
       success: true,
       message: "Channel fetched successfully",
-      item: channel,
+      item: toChannelResponse(channel),
     })
-  }
-  catch (error) {
+  } catch (error) {
+    console.error("Error fetching channel:", error)
     res.status(500).send({
       success: false,
       error: (error as Error).message,
@@ -139,5 +127,146 @@ router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<C
   }
 })
 
-export default router;
+// Create new channel
+router.post("/", async (req: Request, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
+  // Validate input
+  const validationResult = ChannelCreateSchema.safeParse(req.body)
 
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((err) => ({
+      field: err.path.join("."),
+      message: err.message,
+    }))
+
+    return res.status(400).send({
+      success: false,
+      message: "Invalid channel data",
+      error: errors,
+    })
+  }
+
+  const { name, userId }: ChannelCreateInput = validationResult.data
+
+  // TODO: Get userId from authentication middleware instead of request body
+  if (!userId) {
+    return res.status(400).send({
+      success: false,
+      message: "userId is required",
+      error: "User authentication required",
+    })
+  }
+
+  try {
+    // Generate unique channel ID
+    const channelId = generateChannelId()
+
+    // Create channel object
+    const newChannel: Channel = {
+      pk: "CHANNELS",
+      sk: `CHANNEL#${channelId}`,
+      name,
+      owner: `USER#${userId}`,
+    }
+
+    // Save to database
+    await db.send(
+      new PutCommand({
+        TableName: myTable,
+        Item: newChannel,
+        ConditionExpression: "attribute_not_exists(sk)",
+      })
+    )
+
+    res.status(201).send({
+      success: true,
+      message: "Channel created successfully",
+      item: toChannelResponse(newChannel),
+    })
+  } catch (error) {
+    console.error("Error creating channel:", error)
+    res.status(500).send({
+      success: false,
+      error: (error as Error).message,
+      message: "Failed to create channel",
+    })
+  }
+})
+
+// Delete channel
+router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
+  try {
+    const channelId = req.params.id
+    
+    // TODO: Get userId from authentication middleware
+    const { userId } = req.body
+
+    if (!userId) {
+      return res.status(401).send({
+        success: false,
+        message: "Authentication required",
+        error: "userId is required to delete a channel",
+      })
+    }
+
+    // Fetch the channel to verify ownership
+    const getResult = await db.send(
+      new GetCommand({
+        TableName: myTable,
+        Key: {
+          pk: "CHANNELS",
+          sk: `CHANNEL#${channelId}`,
+        },
+      })
+    )
+
+    const existingChannel = getResult.Item as Channel | undefined
+
+    if (!existingChannel) {
+      return res.status(404).send({
+        success: false,
+        message: "Channel not found",
+        error: "Channel does not exist",
+      })
+    }
+
+    // verify ownership
+    const ownerId = existingChannel.owner.replace("USER#", "")
+    if (ownerId !== userId) {
+      return res.status(403).send({
+        success: false,
+        message: "Forbidden",
+        error: "You can only delete channels you created",
+      })
+    }
+
+    // Delete the channel
+    const deleteResult = await db.send(
+      new DeleteCommand({
+        TableName: myTable,
+        Key: {
+          pk: existingChannel.pk,
+          sk: existingChannel.sk,
+        },
+        ConditionExpression: "attribute_exists(sk)",
+        ReturnValues: "ALL_OLD",
+      })
+    )
+
+    const deletedChannel: Channel = deleteResult.Attributes as Channel
+
+    res.status(200).send({
+      success: true,
+      message: "Channel deleted successfully",
+      item: toChannelResponse(deletedChannel),
+    })
+  } catch (error) {
+    console.error("Error deleting channel:", error)
+    res.status(500).send({
+      success: false,
+      error: (error as Error).message,
+      message: "Failed to delete channel",
+    })
+  }
+})
+
+export default router;
