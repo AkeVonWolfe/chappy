@@ -77,4 +77,38 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
   }
 })
 
+// Login user
+router.post("/login", async (req: Request<User>, res: Response<OperationResult<User> | ErrorResponse>) => {
+  const { pk, password } = req.body;
+  try {
+    const result = await db.send(
+      new UpdateCommand({
+        TableName: myTable,
+        Key: { pk, password },
+        UpdateExpression: "SET #name = :name",
+        ExpressionAttributeNames: {
+          "#name": "name",
+        },
+        ExpressionAttributeValues: {
+          ":name": req.body.name,
+        },
+        ReturnValues: "ALL_NEW",
+      })
+    )
+
+    const updatedUser: User = result.Attributes as User;
+    res.status(200).send({
+      success: true,
+      message: "User logged in successfully",
+      item: updatedUser,
+    })
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      error: (error as Error).message,
+      message: "Failed to log in user",
+    })
+  }  
+})
+
 export default router

@@ -1,4 +1,4 @@
-import { ScanCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand, DeleteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
@@ -74,8 +74,33 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
       success: false,
       error: (error as Error).message,
       message: "Failed to delete Channel",
-    });
+    })
   }
-});
+})
 
+// create Channel
+router.post("/", async (req: Request<Channel>, res: Response<OperationResult<Channel> | ErrorResponse>) => {
+  const newChannel: Channel = req.body;
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: myTable,
+        Item: newChannel,
+      })
+    )
+    res.status(201).send({
+      success: true,
+      message: "Channel created successfully",
+      item: newChannel,
+    })
+  } catch (error) {   
+    res.status(500).send({
+      success: false,
+      error: (error as Error).message,
+      message: "Failed to create channel",
+    })
+  }
+})
+
+export default router;
 
