@@ -4,6 +4,7 @@ import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
 import { UserSchema } from "../data/validation.js"
 import type { ErrorResponse, OperationResult } from "../data/types.js";
+import { genSalt, hash } from 'bcrypt'
 
 const router: Router = express.Router()
 
@@ -11,6 +12,7 @@ interface User {
   pk: string;
   sk: string;
   name: string;
+  password: string;
 }
 
 
@@ -35,6 +37,13 @@ router.post("/", async (req: Request<User>, res: Response<OperationResult<User> 
   
   const newUser: User = validationResult.data; // get validated data
   
+
+  // hash password
+  const salt = await genSalt()
+  newUser.password = await hash(newUser.password, salt)
+  
+
+
   try {
     await db.send(
       new PutCommand({

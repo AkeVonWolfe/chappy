@@ -22,6 +22,16 @@ const UserSchema = z.object({
     .min(1, {
       message: "Name is required.",
     }),
+  password: z
+    .string({
+      message: "Password must be a string.",
+    })
+    .min(6, {
+      message: "Password must be at least 6 characters long.",
+    })
+    .max(100, {
+      message: "Password must be at most 100 characters long.",
+    })
 })
 
 // TODO: move over validaton to middle ware ?

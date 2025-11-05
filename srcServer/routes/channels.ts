@@ -1,4 +1,4 @@
-import { ScanCommand, DeleteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { ScanCommand, DeleteCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
@@ -18,13 +18,12 @@ interface Channel {
 router.get("/", async (req, res: Response<SuccessResponse<Channel> | ErrorResponse>) => {
   try {
     const result: GetResult = await db.send(
-      new ScanCommand({  //TODO: change to queary due to flood of message in DB
-        // ScanCommand to get entire table
+      new QueryCommand({
         TableName: myTable,
-        FilterExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)", // filter for channels only
+        KeyConditionExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)",
         ExpressionAttributeValues: {
           ":userPrefix": "CHANNEL", // all channels have pk starting with "CHANNEL"
-          ":meta": "META", // all channels meta have sk "meta"
+          ":meta": "USER", // all channels meta have sk "USER"
         },
       })
     )
@@ -55,7 +54,7 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
         TableName: myTable,
         Key: {
           pk: `CHANNEL#${channelId}`,
-          sk: "META",
+          sk: "USER", // need to get this from auth in future
         },
         ConditionExpression: "attribute_exists(pk)",
         ReturnValues: "ALL_OLD",
@@ -98,6 +97,44 @@ router.post("/", async (req: Request<Channel>, res: Response<OperationResult<Cha
       success: false,
       error: (error as Error).message,
       message: "Failed to create channel",
+    })
+  }
+})
+
+// get channel by id
+router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<Channel> | ErrorResponse>) => {
+  try {
+    const channelId: number = req.params.id;
+    const result = await db.send(
+      new QueryCommand({
+        TableName: myTable,
+        KeyConditionExpression: "pk = :pk AND sk = :sk",
+        ExpressionAttributeValues: {
+          ":pk": `CHANNEL#${channelId}`,
+          ":sk": "USER",
+        }
+      })
+    );
+    const channel: Channel | undefined = result.Items ? (result.Items[0] as Channel) : undefined;
+    if (!channel) {
+
+      return res.status(404).send({
+        success: false,
+        error: Error("Channel not found").message,
+        message: "Channel not found",
+      })
+    }
+    res.status(200).send({
+      success: true,
+      message: "Channel fetched successfully",
+      item: channel,
+    })
+  }
+  catch (error) {
+    res.status(500).send({
+      success: false,
+      error: (error as Error).message,
+      message: "Failed to fetch channel",
     })
   }
 })

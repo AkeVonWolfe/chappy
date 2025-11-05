@@ -1,4 +1,4 @@
-import {  ScanCommand, DeleteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import {  ScanCommand, DeleteCommand, UpdateCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
@@ -18,7 +18,7 @@ interface User {
 router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>) => {
   try {
     const result: GetResult = await db.send(
-      new ScanCommand({  //TODO: Change to queary due to message gonna flood DB
+      new QueryCommand({  //TODO: Change to queary due to message gonna flood DB
         // ScanCommand to get entire table
         TableName: myTable,
         FilterExpression: "begins_with(pk, :userPrefix) AND begins_with(sk, :meta)", // filter for users only
@@ -47,7 +47,7 @@ router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>
 // DELETE user by id
 router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<User> | ErrorResponse>) => {
   try {
-    const userId : number = req.params.id;
+    const userId : number = req.params.id
 
     const result = await db.send(
       new DeleteCommand({
@@ -61,7 +61,7 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
       })
     )
 
-    const deletedUser: User = result.Attributes as User;
+    const deletedUser: User = result.Attributes as User
 
     res.status(200).send({
       success: true,
@@ -79,7 +79,7 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
 
 // Login user
 router.post("/login", async (req: Request<User>, res: Response<OperationResult<User> | ErrorResponse>) => {
-  const { pk, password } = req.body;
+  const { pk, password } = req.body
   try {
     const result = await db.send(
       new UpdateCommand({
@@ -96,7 +96,8 @@ router.post("/login", async (req: Request<User>, res: Response<OperationResult<U
       })
     )
 
-    const updatedUser: User = result.Attributes as User;
+    const updatedUser: User = result.Attributes as User
+
     res.status(200).send({
       success: true,
       message: "User logged in successfully",
