@@ -75,6 +75,43 @@ const messageSchema = z.object({
     message: "Timestamp cannot be empty"
    })
 })
+const UserRegistrationSchema = z.object({
+  pk: z
+    .string({
+      message: "The primary key (pk) must be a string.",
+    })
+    .min(1, {
+      message: "The primary key (pk) is required.",
+    })
+    .regex(/^USER#u\d+$/, {
+      message: "The primary key (pk) must start with 'USER#' followed by a number (e.g., 'USER#123').",
+    }),
+  sk: z.literal("META", {
+    message: "The Sort key (sk) must be exactly 'META'.",
+  }),
+  name: z
+    .string({
+      message: "Name must be a string.",
+    })
+    .min(1, {
+      message: "Name is required.",
+    }),
+  password: z
+    .string({
+      message: "Password must be a string.",
+    })
+    .min(6, {
+      message: "Password must be at least 6 characters long.",
+    })
+    .max(100, {
+      message: "Password must be at most 100 characters long.",
+    }),
+  Guest: z.boolean({
+    message: "Guest must be a boolean value.",
+  }).optional(),
+  
+})
 
 
-export { UserSchema, IdSchema, messageSchema }
+
+export { UserSchema, IdSchema, messageSchema, UserRegistrationSchema }

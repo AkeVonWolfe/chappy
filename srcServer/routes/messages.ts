@@ -21,11 +21,10 @@ interface User {
 
 
 // message in Channel
-
 router.post("/:id", async (req: Request<Message>, res: Response<OperationResult<Message> | ErrorResponse>) => {
   
      // TODO : put valdiaton as middleware?
-    let validateResualt = messageSchema.safeParse(req.body)
+    let validateResualt = messageSchema.safeParse(req.body) // need send channel id also?
     
     if (!validateResualt.success) {
         const errors = validateResualt.error.issues.map((err) => ({
@@ -65,8 +64,6 @@ router.post("/:id", async (req: Request<Message>, res: Response<OperationResult<
 })
 
 // message user to user
-
-
 
 
 
