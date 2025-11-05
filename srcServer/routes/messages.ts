@@ -24,6 +24,7 @@ interface MessageItem {
 
 
 // POST message in Channel
+
 // Route: /messages/:channelId
 router.post("/:channelId", async ( req: Request<{ channelId: string }, {}, MessageBody>, res: Response<OperationResult<MessageItem> |ErrorResponse>) => {
 
@@ -80,9 +81,8 @@ router.post("/:channelId", async ( req: Request<{ channelId: string }, {}, Messa
 })
 
 // POST direct message (user to user)
-// Route: /messages/direct/:recipientId
-router.post("/direct/:recipientId", async (req: Request<{ recipientId: string }, {}, MessageBody>,res: Response<OperationResult<MessageItem> | ErrorResponse>) => {
-    
+router.post("/:recipientId", async (req: Request<{ recipientId: string }, {}, MessageBody>,res: Response<OperationResult<MessageItem> | ErrorResponse>) => {
+
     let validateResult = messageSchema.safeParse(req.body)
     
     if (!validateResult.success) {

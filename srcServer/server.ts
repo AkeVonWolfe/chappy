@@ -2,6 +2,8 @@ import express from "express";
 import type { Express, RequestHandler } from "express";
 import registerRouter from "./routes/register.js";
 import usersRouter from "./routes/users.js";
+import channelsRouter from "./routes/channels.js";
+import messagesRouter from "./routes/messages.js";
 import cors from "cors"
 
 
@@ -25,6 +27,9 @@ app.use(express.json());
 
 app.use("/register", registerRouter);
 app.use("/users", usersRouter);
+app.use("/channels", channelsRouter);
+app.use("/messages", messagesRouter);
+
 
 
 

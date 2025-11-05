@@ -108,7 +108,7 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
           sk: `USER#${userId}`,
         },
       })
-    );
+    )
 
     const user = result.Item;
 
@@ -117,7 +117,7 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
         success: false,
         error: "User not found",
         message: "User not found",
-      });
+      })
     }
 
     // Compare passwords (if hashed)
@@ -127,14 +127,14 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
         success: false,
         error: "Invalid credentials",
         message: "Invalid credentials",
-      });
+      })
     }
 
-    // Generate token using the helper
+    // Generate token using the createToken function
     const token = createToken({
       userId: user.userId,
       name: user.name,
-    });
+    })
 
     res.status(200).send({
       success: true,
@@ -144,14 +144,14 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
         userId: user.userId,
         name: user.name,
       },
-    });
+    })
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).send({
       success: false,
       error: (error as Error).message,
       message: "Failed to log in user",
-    });
+    })
   }
 })
 

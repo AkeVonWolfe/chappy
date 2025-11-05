@@ -44,43 +44,23 @@ const IdSchema = z
   })
 
 const messageSchema = z.object({
-  pk: z
+  message: z
     .string({
-      message: "The primary key (pk) must be a string.",
+      message: "Message must be a string.",
     })
     .min(1, {
-      message: "The primary key (pk) is required.",
-    })  //  + * ?     ka -> pannkaka
-    .regex(/^USER#u\d+$/, {
-      message: "The primary key (pk) must start with 'USER#' followed by a number (e.g., 'USER#123').",
+      message: "Message cannot be empty.",
+    })
+    .max(5000, {
+      message: "Message must be at most 5000 characters long.",
     }),
-
-  sk: z.literal("META", {
-    message: "The Sort key (sk) must be exactly 'META'.",
-  }),
-
-  message: z
-   .string({
-    
-   })
-   .min(1,{
-    message: "Cannot be empty"
-   }),
-
-   timestamp: z 
-   .number({
-    message: "Timestamp must be a number"
-   })
-   .min(1, {
-    message: "Timestamp cannot be empty"
-   }),
-    senderId: z
-   .string({
-    message: "Sender ID must be a string"
-   })
-   .min(1, {
-    message: "Sender ID cannot be empty"
-   })
+  senderId: z
+    .string({
+      message: "Sender ID must be a string.",
+    })
+    .min(1, {
+      message: "Sender ID cannot be empty.",
+    }),
 })
 const UserRegistrationSchema = z.object({
   name: z

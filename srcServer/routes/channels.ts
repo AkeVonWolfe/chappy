@@ -269,4 +269,4 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
   }
 })
 
-export default router;
+export default router
