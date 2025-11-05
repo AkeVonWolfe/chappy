@@ -73,6 +73,13 @@ const messageSchema = z.object({
    })
    .min(1, {
     message: "Timestamp cannot be empty"
+   }),
+    senderId: z
+   .string({
+    message: "Sender ID must be a string"
+   })
+   .min(1, {
+    message: "Sender ID cannot be empty"
    })
 })
 const UserRegistrationSchema = z.object({
