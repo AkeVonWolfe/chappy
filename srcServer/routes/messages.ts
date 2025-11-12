@@ -98,102 +98,61 @@ router.get("/user/:userId/sent", async (
     }
 })
 
+// GET all direct messages between two users
+// Route: /messages/direct/:userA/:userB
+router.get("/direct/:userA/:userB", async (req, res: Response) => {
+  const { userA, userB } = req.params;
 
-// GET all direct messages TO a specific user (received)
-// Route: /messages/user/:userId/received
-router.get("/user/:userId/received", async (
-    req: Request<{ userId: string }>, 
-    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
-) => {
-    const { userId } = req.params
-    
-    try {
-        // Query messages sent TO this user (uses GSI)
-        const result = await db.send(
-            new QueryCommand({
-                TableName: myTable,
-                IndexName: "GSI1", // Uses GSI with sk as partition key
-                KeyConditionExpression: "begins_with(sk, :skPrefix)",
-                ExpressionAttributeValues: {
-                    ":skPrefix": `USER#${userId}#`
-                },
-                ScanIndexForward: true
-            })
-        )
-        
-        const messages = (result.Items || []) as MessageItem[]
-        
-        res.status(200).send({
-            success: true,
-            count: messages.length,
-            items: messages
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not retrieve received messages"
-        })
-    }
-})
+  if (!userA || !userB) {
+    return res.status(400).send({
+      success: false,
+      message: "Both user IDs are required",
+    });
+  }
 
+  try {
+    // Query messages where userA is sender
+    const resultA = await db.send(
+      new QueryCommand({
+        TableName: myTable,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": `MESSAGE#USER#${userA}`,
+          ":skPrefix": `USER#${userB}#`,
+        },
+      })
+    );
 
-// GET all direct messages for a user (both sent and received)
-// Route: /messages/user/:userId
-router.get("/user/:userId", async (
-    req: Request<{ userId: string }>, 
-    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
-) => {
-    const { userId } = req.params
-    
-    try {
-        // Query for messages sent BY this user (uses primary key)
-        const sentMessages = await db.send(
-            new QueryCommand({
-                TableName: myTable,
-                KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
-                ExpressionAttributeValues: {
-                    ":pk": `MESSAGE#USER#${userId}`,
-                    ":skPrefix": "USER#" // Only direct messages, not channel messages
-                },
-                ScanIndexForward: true
-            })
-        )
-        
-        // Query for messages sent TO this user (uses GSI)
-        const receivedMessages = await db.send(
-            new QueryCommand({
-                TableName: myTable,
-                IndexName: "GSI1",
-                KeyConditionExpression: "begins_with(sk, :skPrefix)",
-                ExpressionAttributeValues: {
-                    ":skPrefix": `USER#${userId}#`
-                },
-                ScanIndexForward: true
-            })
-        )
-        
-        // Combine and sort by timestamp
-        const allMessages = [
-            ...(sentMessages.Items || []),
-            ...(receivedMessages.Items || [])
-        ] as MessageItem[]
-        
-        allMessages.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-        
-        res.status(200).send({
-            success: true,
-            count: allMessages.length,
-            items: allMessages
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not retrieve user messages"
-        })
-    }
-})
+    // Query messages where userB is sender
+    const resultB = await db.send(
+      new QueryCommand({
+        TableName: myTable,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": `MESSAGE#USER#${userB}`,
+          ":skPrefix": `USER#${userA}#`,
+        },
+      })
+    );
+
+    // Combine and sort all messages by timestamp
+    const combined = [...(resultA.Items ?? []), ...(resultB.Items ?? [])];
+    combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    res.status(200).send({
+      success: true,
+      count: combined.length,
+      items: combined,
+    });
+  } catch (error) {
+    console.error("Error fetching direct messages:", error);
+    res.status(500).send({
+      success: false,
+      message: "Could not fetch direct messages",
+      error: (error as Error).message,
+    });
+  }
+});
 
 
 // POST message in Channel
