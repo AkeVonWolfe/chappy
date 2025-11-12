@@ -19,6 +19,7 @@ export default function ChatApp(): React.ReactElement {
   const [newChannelName, setNewChannelName] = useState("");
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
 
   //Fetch channels from backend
   const fetchChannels = async () => {
@@ -41,9 +42,25 @@ export default function ChatApp(): React.ReactElement {
     }
   };
 
+  const fetchUsers = async () => {
+  try {
+    const res = await fetch("http://localhost:1337/users");
+    const data = await res.json();
+
+    if (data.success && Array.isArray(data.items)) {
+      setUsers(data.items);
+    } else {
+      console.error("Failed to fetch users: unexpected response", data);
+    }
+  } catch (err) {
+    console.error("Error fetching users:", err);
+  }
+};
+
   // Fetch channels when the component loads
   useEffect(() => {
     fetchChannels();
+    fetchUsers();
   }, []);
 
   const createChannel = async () => {};
@@ -74,6 +91,7 @@ export default function ChatApp(): React.ReactElement {
         sendMessage={sendMessage}
         loading={loading}
         currentUser={CURRENT_USER}
+        users={users} 
       />
     </div>
   );

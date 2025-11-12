@@ -11,6 +11,7 @@ interface ChatAreaProps {
   sendMessage: (e?: React.FormEvent | React.MouseEvent) => Promise<void> | void;
   loading: boolean;
   currentUser: User;
+  users: User[];
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -20,7 +21,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   setMessageInput,
   sendMessage,
   loading,
-  currentUser
+  currentUser,
+  users
 }) => {
   if (!selectedChannel) {
     return (
@@ -35,9 +37,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       <div className="chat-header">
         <h2>{selectedChannel.name}</h2>
         <div className="user-group">
-          {[...Array(9)].map((_, i) => (
-            <div key={i} className="avatar">
-              P
+          {users.map((user) => (
+            <div key={user.sk} className="avatar">
+              {user.name[0].toUpperCase()}
             </div>
           ))}
         </div>

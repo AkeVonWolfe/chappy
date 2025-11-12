@@ -1,6 +1,10 @@
 export interface User {
   id: string;
   name: string;
+  sk?: string; // unique user key, e.g., "USER#1"
+  pk?: string;
+  Guest?: boolean;
+  password?: string;
 }
 
 export interface Channel {
