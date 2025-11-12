@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "../App.css";
 import Sidebar from "./sidebar";
 import ChatArea from "./chatArea";
@@ -10,21 +10,41 @@ const CURRENT_USER: User = {
 };
 
 export default function ChatApp(): React.ReactElement {
-  const [channels] = useState<Channel[]>([
-    { id: "1", name: "Channel 1", ownerId: "user-123" },
-    { id: "2", name: "Channel 2", ownerId: "user-456" },
-    { id: "3", name: "Channel 3", ownerId: "user-789" },
-    { id: "4", name: "Channel 4", ownerId: "user-000" }
-  ]);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(channels[0]);
-  const [messages] = useState<Message[]>([
-    { id: "m1", senderId: "user-456", message: "Hi, how are you?", timestamp: new Date().toISOString() },
-    { id: "m2", senderId: "user-123", message: "Hi, how are you?", timestamp: new Date().toISOString() }
-  ]);
+
+// state variables
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState("");
   const [newChannelName, setNewChannelName] = useState("");
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  //Fetch channels from backend
+  const fetchChannels = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:1337/channels");
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.items)) {
+        setChannels(data.items);
+        // Automatically select the first channel if none selected
+        if (!selectedChannel && data.items.length > 0) {
+          setSelectedChannel(data.items[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch channels:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch channels when the component loads
+  useEffect(() => {
+    fetchChannels();
+  }, []);
 
   const createChannel = async () => {};
   const deleteChannel = async (id: string) => {};
@@ -45,6 +65,7 @@ export default function ChatApp(): React.ReactElement {
         loading={loading}
         currentUser={CURRENT_USER}
       />
+
       <ChatArea
         selectedChannel={selectedChannel}
         messages={messages}

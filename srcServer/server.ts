@@ -10,11 +10,12 @@ import cors from "cors"
 const port = process.env.PORT || 3000;
 const app: Express = express();
 
-app.use(cors({
-  origin: "http://localhost:1337", 
-  methods: ["GET", "POST", "DELETE", "PUT"],
-  credentials: true
-}))
+app.use(
+  cors({
+    origin: "http://localhost:5173", //  frontend 
+    credentials: true,
+  })
+);
 
 // Logger
 const logger: RequestHandler = (req, res, next) => {
