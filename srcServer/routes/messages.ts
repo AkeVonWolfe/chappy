@@ -3,7 +3,7 @@ import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
 import { messageSchema } from "../data/validation.js"
 import type { ErrorResponse, OperationResult, SuccessResponse } from "../data/types.js";
-import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 const router: Router = express.Router()
 
@@ -25,41 +25,41 @@ interface MessageItem {
 
 // GET all messages from a channel
 // Route: /messages/channel/:channelId
-router.get("/channel/:channelId", async (
-    req: Request<{ channelId: string }>, 
-    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
-) => {
-    const { channelId } = req.params
-    
-    try {
-        const result = await db.send(
-            new QueryCommand({
-                TableName: myTable,
-                IndexName: "GSI1", // Uses GSI with sk as partition key
-                KeyConditionExpression: "begins_with(sk, :skPrefix)",
-                ExpressionAttributeValues: {
-                    ":skPrefix": `CHANNEL#${channelId}#`
-                },
-                ScanIndexForward: true // Sort by timestamp ascending (oldest first)
-            })
-        )
-        
-        const messages = (result.Items || []) as MessageItem[]
-        
-        res.status(200).send({
-            success: true,
-            count: messages.length,
-            items: messages
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not retrieve channel messages"
-        })
-    }
-})
+router.get("/:channelId", async (req, res: Response) => {
+  const { channelId } = req.params;
 
+  if (!channelId) {
+    return res.status(400).json({
+      success: false,
+      message: "Channel ID is required",
+    });
+  }
+
+  try {
+    const result = await db.send(
+      new ScanCommand({
+        TableName: myTable,
+        FilterExpression: "channelId = :channelId",
+        ExpressionAttributeValues: {
+          ":channelId": channelId,
+        },
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      count: result.Count ?? 0,
+      items: result.Items ?? [],
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({
+      success: false,
+      message: "Could not fetch messages",
+      error: (error as Error).message,
+    });
+  }
+});
 
 // GET all messages sent BY a specific user
 // Route: /messages/user/:userId/sent

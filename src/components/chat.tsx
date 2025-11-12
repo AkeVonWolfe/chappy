@@ -20,6 +20,8 @@ export default function ChatApp(): React.ReactElement {
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [isDirectChat, setIsDirectChat] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);    
 
   //Fetch channels from backend
   const fetchChannels = async () => {
@@ -57,11 +59,39 @@ export default function ChatApp(): React.ReactElement {
   }
 };
 
-  // Fetch channels when the component loads
+const fetchMessages = async (channelId: string) => {
+  try {
+    setLoading(true);
+    const res = await fetch(`http://localhost:1337/messages/${channelId}`);
+    const data = await res.json();
+
+    if (data.success && Array.isArray(data.items)) {
+      setMessages(data.items);
+    } else {
+      setMessages([]);
+      console.error("Failed to fetch messages: unexpected response", data);
+    }
+  } catch (err) {
+    console.error("Error fetching messages:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Fetch channels and users when the component loads
   useEffect(() => {
     fetchChannels();
     fetchUsers();
   }, []);
+
+// Fetch messages when selectedChannel changes
+  useEffect(() => {
+  if (selectedChannel) {
+    setMessages([]);
+    fetchMessages(selectedChannel.id);
+  }
+}, [selectedChannel]);
+
 
   const createChannel = async () => {};
   const deleteChannel = async (id: string) => {};
