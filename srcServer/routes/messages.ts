@@ -25,8 +25,8 @@ interface MessageItem {
 
 // POST message in Channel
 
-// Route: /messages/:channelId
-router.post("/:channelId", async ( req: Request<{ channelId: string }, {}, MessageBody>, res: Response<OperationResult<MessageItem> |ErrorResponse>) => {
+// Route: /messages/channel/:channelId
+router.post("/channel/:channelId", async ( req: Request<{ channelId: string }, {}, MessageBody>, res: Response<OperationResult<MessageItem> |ErrorResponse>) => {
 
     // TODO: put validation as middleware?
     let validateResult = messageSchema.safeParse(req.body)
@@ -46,7 +46,7 @@ router.post("/:channelId", async ( req: Request<{ channelId: string }, {}, Messa
     const { message, senderId } = validateResult.data
     const { channelId } = req.params
     
-    // Generate timestamp (ISO 8601 format for readability and sorting)
+    // Generate timestamp and sorting
     const timestamp = new Date().toISOString()
     
     // Create the DynamoDB item with proper keys
@@ -81,7 +81,7 @@ router.post("/:channelId", async ( req: Request<{ channelId: string }, {}, Messa
 })
 
 // POST direct message (user to user)
-router.post("/:recipientId", async (req: Request<{ recipientId: string }, {}, MessageBody>,res: Response<OperationResult<MessageItem> | ErrorResponse>) => {
+router.post("/direct/:recipientId", async (req: Request<{ recipientId: string }, {}, MessageBody>,res: Response<OperationResult<MessageItem> | ErrorResponse>) => {
 
     let validateResult = messageSchema.safeParse(req.body)
     

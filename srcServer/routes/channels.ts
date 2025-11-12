@@ -36,7 +36,7 @@ function generateChannelId(): string {
 // Convert Channel to ChannelResponse
 function toChannelResponse(channel: Channel): ChannelResponse {
   return {
-    id: channel.sk.replace("CHANNEL#", ""),
+    id: channel.sk.replace("CHANNEL#", ""), // remove prefix
     name: channel.name,
     ownerId: channel.owner.replace("USER#", ""),
   }
