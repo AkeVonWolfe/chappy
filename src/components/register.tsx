@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
 import './login.css'
 
-const Login = () => {
+const Register = () => {
 
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
-const handleLogin = () => {
+const goToLogin = () => {
   
   console.log('Logging in with', { username, password });
 }
 
-const goToRegister = () => {
+const registerButton = () => {
     console.log('Registering with', { username, password });    
 }
 
-const handleGuest = () => {
-    console.log('Continuing as guest');
-}
 
   return (
     <div className="login-container">
@@ -46,18 +43,16 @@ const handleGuest = () => {
       </div>
 
       <div className="button-group">
-        <button className="btn-login" onClick={handleLogin}>
+        <button className="btn-back" onClick={goToLogin}>
           Login
         </button>
-        <button className="btn-register" onClick={goToRegister}>
+        <button className="btn-register" onClick={registerButton}>
           Register
         </button>
-        <button className="btn-guest" onClick={handleGuest}>
-          Continue as Guest
-        </button>
+        
       </div>
     </div>
   );
 };
 
-export default Login;
+export default Register;
