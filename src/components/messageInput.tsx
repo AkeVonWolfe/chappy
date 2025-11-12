@@ -1,5 +1,6 @@
 import React from "react";
 
+
 interface MessageInputProps {
   messageInput: string;
   setMessageInput: (v: string) => void;
@@ -17,17 +18,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
     <div className="input-row">
       <input
         type="text"
+        placeholder="Type a message..."
         value={messageInput}
         onChange={(e) => setMessageInput(e.target.value)}
-        placeholder="Type a message..."
         disabled={loading}
-        onKeyPress={(e) => e.key === "Enter" && sendMessage(e)}
+        onKeyDown={(e) => e.key === "Enter" && sendMessage(e)}
       />
       <button
-        onClick={() => sendMessage()}
-        disabled={loading || !messageInput.trim()}
         className="send-btn"
-      />
+        onClick={sendMessage}
+        disabled={loading || !messageInput.trim()}
+      >
+        
+      </button>
     </div>
   </div>
 );

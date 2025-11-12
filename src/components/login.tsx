@@ -12,6 +12,7 @@ const handleLogin = () => {
 }
 
 const goToRegister = () => {
+    
     console.log('Registering with', { username, password });    
 }
 

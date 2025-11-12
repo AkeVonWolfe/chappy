@@ -14,7 +14,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, currentUser }) => (
         className={`message-row ${msg.senderId === currentUser.id ? "self" : ""}`}
       >
         {msg.senderId !== currentUser.id && <div className="avatar">P</div>}
-        <div className={`message-bubble ${msg.senderId === currentUser.id ? "self-bubble" : ""}`}>
+        <div
+          className={`message-bubble ${msg.senderId === currentUser.id ? "self-bubble" : ""}`}
+        >
           <p>{msg.message}</p>
         </div>
         {msg.senderId === currentUser.id && <div className="avatar self-avatar">P</div>}

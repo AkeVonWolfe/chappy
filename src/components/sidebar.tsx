@@ -1,20 +1,18 @@
-import React from "react"
-import type { Channel, User } from "../types"
-
-
+import React from "react";
+import type { Channel, User } from "../types";
 
 interface SidebarProps {
-  channels: Channel[]
-  selectedChannel: Channel | null
-  setSelectedChannel: (c: Channel) => void
-  showCreateChannel: boolean
-  setShowCreateChannel: (b: boolean) => void
-  newChannelName: string
-  setNewChannelName: (name: string) => void
-  createChannel: () => void
-  deleteChannel: (id: string) => void
-  loading: boolean
-  currentUser: User
+  channels: Channel[];
+  selectedChannel: Channel | null;
+  setSelectedChannel: React.Dispatch<React.SetStateAction<Channel | null>>;
+  showCreateChannel: boolean;
+  setShowCreateChannel: React.Dispatch<React.SetStateAction<boolean>>;
+  newChannelName: string;
+  setNewChannelName: React.Dispatch<React.SetStateAction<string>>;
+  createChannel: () => Promise<void>;
+  deleteChannel: (channelId: string) => Promise<void>;
+  loading: boolean;
+  currentUser: User;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -40,23 +38,21 @@ const Sidebar: React.FC<SidebarProps> = ({
         {channels.map((channel) => (
           <div
             key={channel.id}
-            onClick={() => setSelectedChannel(channel)}
             className={`sidebar-item ${selectedChannel?.id === channel.id ? "active" : ""}`}
+            onClick={() => setSelectedChannel(channel)}
           >
-            <div className="sidebar-item-content">
-              <span>{channel.name}</span>
-              {channel.ownerId === currentUser.id && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    deleteChannel(channel.id)
-                  }}
-                  className="delete-button"
-                >
-                  ×
-                </button>
-              )}
-            </div>
+            <span>{channel.name}</span>
+            {channel.ownerId === currentUser.id && (
+              <button
+                className="delete-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteChannel(channel.id);
+                }}
+              >
+                ×
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -66,19 +62,18 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="create-channel-form">
             <input
               type="text"
+              placeholder="Channel name"
               value={newChannelName}
               onChange={(e) => setNewChannelName(e.target.value)}
-              placeholder="Channel name"
-              onKeyPress={(e) => e.key === "Enter" && createChannel()}
             />
             <div className="button-group">
-              <button onClick={createChannel} disabled={loading} className="create-btn">
+              <button onClick={createChannel} className="create-btn" disabled={loading}>
                 Create
               </button>
               <button
                 onClick={() => {
-                  setShowCreateChannel(false)
-                  setNewChannelName("")
+                  setShowCreateChannel(false);
+                  setNewChannelName("");
                 }}
                 className="cancel-btn"
               >
@@ -88,12 +83,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           <button onClick={() => setShowCreateChannel(true)} className="create-toggle-btn">
-            Create
+            + Create
           </button>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default Sidebar;
