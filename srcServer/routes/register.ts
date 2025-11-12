@@ -65,7 +65,7 @@ router.post( "/", async (req: Request,res: Response<OperationResult<UserResponse
       // Create user object
       const newUser: User = {
         pk: "USERS",
-        sk: `USERS#${userId}`,
+        sk: `USER#${userId}`,
         name,
         password: hashedPassword,
         Guest: false,
