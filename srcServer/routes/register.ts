@@ -1,122 +1,94 @@
-import {PutCommand,} from "@aws-sdk/lib-dynamodb";
+import {PutCommand, QueryCommand} from "@aws-sdk/lib-dynamodb";
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
 import { UserRegistrationSchema } from "../data/validation.js"
 import type { ErrorResponse, OperationResult } from "../data/types.js";
-import { genSalt, hash } from 'bcrypt'
+import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 
 const router: Router = express.Router()
 
-interface User {
-  pk: string
-  sk: string
-  name: string
-  password: string
-  Guest: boolean
-}
-
-interface UserRegistrationInput {
-  name: string
-  password: string
-}
-
-interface UserResponse {
-  pk: string
-  sk: string
-  name: string
-  Guest: boolean
-}
-
-// Generate a unique user ID
-function generateUserId(): string {
-  return randomUUID()
+interface RegisterBody {
+  name: string;
+  password: string;
 }
 
 // User registration
-router.post( "/", async (req: Request,res: Response<OperationResult<UserResponse> | ErrorResponse> ) => {
-    // Validate input data
-    const validationResult = UserRegistrationSchema.safeParse(req.body)
+router.post(
+  "/register",
+  async (req: Request<{}, {}, RegisterBody>, res: Response) => {
+    const { name, password } = req.body;
 
-    if (!validationResult.success) {
-      const errors = validationResult.error.issues.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }))
-
+    if (!name || !password) {
       return res.status(400).send({
         success: false,
-        message: "Invalid user data",
-        error: errors,
-      })
+        message: "Name and password are required",
+      });
     }
 
-    const { name, password }: UserRegistrationInput = validationResult.data
-
     try {
-      // Hash password
-      const salt = await genSalt(10)
-      const hashedPassword = await hash(password, salt)
+      //  Check if user already exists
+      const existing = await db.send(
+        new QueryCommand({
+          TableName: myTable,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+          FilterExpression: "#name = :nameVal",
+          ExpressionAttributeNames: {
+            "#name": "name",
+          },
+          ExpressionAttributeValues: {
+            ":pk": "USERS",
+            ":skPrefix": "USER#",
+            ":nameVal": name,
+          },
+        })
+      );
 
-      // Generate unique user ID
-      const userId = generateUserId()
+      if (existing.Items && existing.Items.length > 0) {
+        return res.status(409).send({
+          success: false,
+          message: "User already exists",
+        });
+      }
 
-      // Create user object
-      const newUser: User = {
+      //  Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const userId = randomUUID();
+
+      // Save user
+      const newUser = {
         pk: "USERS",
         sk: `USER#${userId}`,
         name,
         password: hashedPassword,
         Guest: false,
-      }
+      };
 
-      // Save to database
       await db.send(
         new PutCommand({
           TableName: myTable,
           Item: newUser,
-          ConditionExpression: "attribute_not_exists(sk)", // Prevent overwriting
         })
-      )
+      );
 
-      // Prepare response without password so we dont leak password
-      const userResponse: UserResponse = {
-        pk: newUser.pk,
-        sk: newUser.sk,
-        name: newUser.name,
-        Guest: newUser.Guest,
-      }
-
-      return res.status(201).send({
+      res.status(201).send({
         success: true,
-        message: "User created successfully",
-        item: userResponse,
-      })
+        message: "User registered successfully",
+        user: {
+          userId,
+          name,
+        },
+      });
     } catch (error) {
-      // Check if error is due to duplicate user
-      if ((error as any).name === "ConditionalCheckFailedException") {
-        return res.status(409).send({
-          success: false,
-          message: "User already exists",
-          error: "A user with this ID already exists",
-        })
-      }
-
-      // Generic error
-      console.error("Error creating user:", error)
-      return res.status(500).send({
+      console.error("Register error:", error);
+      res.status(500).send({
         success: false,
-        message: "Failed to create user",
+        message: "Failed to register user",
         error: (error as Error).message,
-      })
+      });
     }
   }
-)
+);
 
-// create random guest
-//lägg den nog i zustands
-// då kanske man inte behöver en JWT för Guest i localStorage
-
-
-export default router
+export default router;

@@ -95,64 +95,81 @@ router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResul
 
 
 // Login user
+// Login user (by name + password)
 router.post("/login", async (req: Request, res: Response<LoginResponse<User> | ErrorResponse>) => {
+  const { name, password } = req.body;
 
-  const { userId, name, password } = req.body
-  
+  if (!name || !password) {
+    return res.status(400).send({
+      success: false,
+      error: "Name and password are required",
+      message: "Name and password are required",
+    });
+  }
+
   try {
+    // ✅ Query DynamoDB for a user with this name
     const result = await db.send(
-      new GetCommand({
+      new QueryCommand({
         TableName: myTable,
-        Key: {
-          pk: "USERS",
-          sk: `USER#${userId}`,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        FilterExpression: "#name = :nameVal",
+        ExpressionAttributeNames: {
+          "#name": "name",
+        },
+        ExpressionAttributeValues: {
+          ":pk": "USERS",
+          ":skPrefix": "USER#",
+          ":nameVal": name,
         },
       })
-    )
+    );
 
-    const user = result.Item;
+    const user = result.Items && result.Items[0];
 
     if (!user) {
       return res.status(404).send({
         success: false,
         error: "User not found",
-        message: "User not found",
-      })
+        message: "No user with that name exists",
+      });
     }
 
-    // Compare passwords (if hashed)
+    // Compare password using bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).send({
         success: false,
         error: "Invalid credentials",
-        message: "Invalid credentials",
-      })
+        message: "Incorrect password",
+      });
     }
 
-    // Generate token using the createToken function
+    //Extract user ID from SK
+    const cleanId = user.sk.startsWith("USER#") ? user.sk.replace("USER#", "") : user.sk;
+
     const token = createToken({
-      userId: user.userId,
+      userId: cleanId,
       name: user.name,
-    })
+    });
 
     res.status(200).send({
       success: true,
       message: "User logged in successfully",
       token,
       user: {
-        userId: user.userId,
+        userId: cleanId,
         name: user.name,
       },
-    })
+    });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).send({
       success: false,
       error: (error as Error).message,
       message: "Failed to log in user",
-    })
+    });
   }
-})
+});
 
 export default router

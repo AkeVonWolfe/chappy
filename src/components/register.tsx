@@ -1,33 +1,60 @@
-import React, { useState } from 'react';
-import './login.css'
+import React, { useState } from "react";
+import "./login.css";
+import { useNavigate } from "react-router";
 
 const Register = () => {
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-const [username, setUsername] = useState('');
-const [password, setPassword] = useState('');
+  const handleRegister = async () => {
+    if (!name || !password) {
+      console.log("Please fill in both fields");
+      return;
+    }
 
-const goToLogin = () => {
-  
-  console.log('Logging in with', { username, password });
-}
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:1337/register/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
 
-const registerButton = () => {
-    console.log('Registering with', { username, password });    
-}
+      const data = await res.json();
 
+      if (!res.ok || !data.success) {
+        console.log(data.message || "Failed to register user");
+        return;
+      }
+
+      console.log("Registered successfully! You can now log in.");
+      navigate("/");
+    } catch (error) {
+      console.error("Error registering:", error);
+      console.log("Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToLogin = () => {
+    navigate("/login");
+  };
 
   return (
     <div className="login-container">
-      <h1>Welcome</h1>
-      
+      <h1>Create Account</h1>
+
       <div className="input-group">
-        <label htmlFor="username">Username</label>
+        <label htmlFor="name">Username</label>
         <input
           type="text"
-          id="username"
-          placeholder="Enter your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          id="name"
+          placeholder="Choose a username"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
       </div>
 
@@ -36,7 +63,7 @@ const registerButton = () => {
         <input
           type="password"
           id="password"
-          placeholder="Enter your password"
+          placeholder="Create a password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -44,12 +71,11 @@ const registerButton = () => {
 
       <div className="button-group">
         <button className="btn-back" onClick={goToLogin}>
-          Login
+          Back to Login
         </button>
-        <button className="btn-register" onClick={registerButton}>
-          Register
+        <button className="btn-register" onClick={handleRegister} disabled={loading}>
+          {loading ? "Registering..." : "Register"}
         </button>
-        
       </div>
     </div>
   );

@@ -4,12 +4,17 @@ import Sidebar from "./sidebar";
 import ChatArea from "./chatArea";
 import type { Channel, Message, User } from "../types";
 
-const CURRENT_USER: User = {
-  id: "user-123",
-  name: "Current User"
-};
+const storedUser = localStorage.getItem("user");
+const CURRENT_USER: User = storedUser
+  ? JSON.parse(storedUser)
+  : { id: "guest", name: "Guest User" };
 
 export default function ChatApp(): React.ReactElement {
+    const storedUser = localStorage.getItem("user");
+    const CURRENT_USER: User = storedUser
+    ? JSON.parse(storedUser)
+    : { id: "guest", name: "Guest User" };
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
