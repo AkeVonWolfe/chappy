@@ -100,170 +100,156 @@ router.get("/user/:userId/sent", async (
 
 // GET all direct messages between two users
 // Route: /messages/direct/:userA/:userB
-router.get("/direct/:userA/:userB", async (req, res: Response) => {
+// GET all direct messages between two users
+router.get("/direct/:userA/:userB", async (req, res) => {
   const { userA, userB } = req.params;
 
-  if (!userA || !userB) {
-    return res.status(400).send({
-      success: false,
-      message: "Both user IDs are required",
-    });
-  }
-
   try {
-    // Query messages where userA is sender
-    const resultA = await db.send(
-      new QueryCommand({
-        TableName: myTable,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
-        ExpressionAttributeValues: {
-          ":pk": `MESSAGE#USER#${userA}`,
-          ":skPrefix": `USER#${userB}#`,
-        },
-      })
-    );
+    // Normalize IDs: remove or add USER# prefix if needed
+    const normalize = (id: string) => id.replace(/^USER#/, "");
+    const a = normalize(userA);
+    const b = normalize(userB);
 
-    // Query messages where userB is sender
-    const resultB = await db.send(
-      new QueryCommand({
-        TableName: myTable,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
-        ExpressionAttributeValues: {
-          ":pk": `MESSAGE#USER#${userB}`,
-          ":skPrefix": `USER#${userA}#`,
-        },
-      })
-    );
+    const [fromAtoB, fromBtoA] = await Promise.all([
+      db.send(
+        new QueryCommand({
+          TableName: myTable,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+          ExpressionAttributeValues: {
+            ":pk": `MESSAGE#USER#${a}`,
+            ":skPrefix": `USER#${b}`,
+          },
+        })
+      ),
+      db.send(
+        new QueryCommand({
+          TableName: myTable,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+          ExpressionAttributeValues: {
+            ":pk": `MESSAGE#USER#${b}`,
+            ":skPrefix": `USER#${a}`,
+          },
+        })
+      ),
+    ]);
 
-    // Combine and sort all messages by timestamp
-    const combined = [...(resultA.Items ?? []), ...(resultB.Items ?? [])];
-    combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const allMessages = [
+      ...(fromAtoB.Items ?? []),
+      ...(fromBtoA.Items ?? []),
+    ].sort((a, b) =>
+      a.timestamp > b.timestamp ? 1 : a.timestamp < b.timestamp ? -1 : 0
+    );
 
     res.status(200).send({
       success: true,
-      count: combined.length,
-      items: combined,
+      count: allMessages.length,
+      items: allMessages,
     });
   } catch (error) {
     console.error("Error fetching direct messages:", error);
     res.status(500).send({
       success: false,
-      message: "Could not fetch direct messages",
+      message: "Failed to fetch direct messages",
       error: (error as Error).message,
     });
   }
 });
 
 
+
 // POST message in Channel
 // Route: /messages/channel/:channelId
-router.post("/channel/:channelId", async (
-    req: Request<{ channelId: string }, {}, MessageBody>, 
-    res: Response<OperationResult<MessageItem> | ErrorResponse>
-) => {
-    let validateResult = messageSchema.safeParse(req.body)
-    
-    if (!validateResult.success) {
-        const errors = validateResult.error.issues.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-        }))
-        return res.status(400).send({
-            success: false,
-            message: "Invalid message body",
-            error: errors,
-        })
-    }
-    
-    const { message, senderId } = validateResult.data
-    const { channelId } = req.params
-    
-    const timestamp = new Date().toISOString()
-    
-    const newMessage: MessageItem = {
-        pk: `MESSAGE#USER#${senderId}`,
-        sk: `CHANNEL#${channelId}#${timestamp}`,
-        message,
-        senderId,
-        channelId,
-        timestamp
-    }
-    
-    try {
-        await db.send(
-            new PutCommand({
-                TableName: myTable,
-                Item: newMessage,
-            })
-        )
-        res.status(201).send({
-            success: true,
-            message: "Message sent successfully",
-            item: newMessage,
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not post message"
-        })
-    }
-})
+router.post("/:channelId", async (req, res) => {
+  const { channelId } = req.params;
+  const { message, senderId } = req.body;
+
+  if (!message || !senderId) {
+    return res.status(400).send({
+      success: false,
+      message: "Message and senderId are required",
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+
+  const newMessage = {
+    pk: `MESSAGE#CHANNEL#${channelId}`,
+    sk: `MESSAGE#${timestamp}`,
+    message,
+    senderId,
+    channelId,
+    timestamp,
+  };
+
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: myTable,
+        Item: newMessage,
+      })
+    );
+
+    res.status(201).send({
+      success: true,
+      message: "Message sent successfully",
+      item: newMessage,
+    });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    res.status(500).send({
+      success: false,
+      message: "Failed to send message",
+      error: (error as Error).message,
+    });
+  }
+});
 
 
 // POST direct message (user to user)
 // Route: /messages/direct/:recipientId
-router.post("/direct/:recipientId", async (
-    req: Request<{ recipientId: string }, {}, MessageBody>,
-    res: Response<OperationResult<MessageItem> | ErrorResponse>
-) => {
-    let validateResult = messageSchema.safeParse(req.body)
-    
-    if (!validateResult.success) {
-        const errors = validateResult.error.issues.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-        }))
-        return res.status(400).send({
-            success: false,
-            message: "Invalid message body",
-            error: errors,
-        })
-    }
-    
-    const { message, senderId } = validateResult.data
-    const { recipientId } = req.params
-    const timestamp = new Date().toISOString()
-    
-    const newMessage: MessageItem = {
-        pk: `MESSAGE#USER#${senderId}`,
-        sk: `USER#${recipientId}#${timestamp}`,
-        message,
-        senderId,
-        channelId: recipientId, // Reusing field for recipient
-        timestamp
-    }
-    
-    try {
-        await db.send(
-            new PutCommand({
-                TableName: myTable,
-                Item: newMessage,
-            })
-        )
-        res.status(201).send({
-            success: true,
-            message: "Direct message sent successfully",
-            item: newMessage,
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not send direct message"
-        })
-    }
-})
+router.post("/direct/:senderId/:recipientId", async (req, res) => {
+  const { senderId, recipientId } = req.params;
+  const { message } = req.body;
 
+  if (!message || !senderId || !recipientId) {
+    return res.status(400).send({
+      success: false,
+      message: "Message, senderId and recipientId are required",
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+
+  const newMessage = {
+    pk: `MESSAGE#USER#${senderId}`,
+    sk: `USER#${recipientId}#${timestamp}`,
+    message,
+    senderId,
+    recipientId,
+    timestamp,
+  };
+
+  try {
+    await db.send(
+      new PutCommand({
+        TableName: myTable,
+        Item: newMessage,
+      })
+    );
+
+    res.status(201).send({
+      success: true,
+      message: "Direct message sent successfully",
+      item: newMessage,
+    });
+  } catch (error) {
+    console.error("Error sending direct message:", error);
+    res.status(500).send({
+      success: false,
+      message: "Failed to send direct message",
+      error: (error as Error).message,
+    });
+  }
+});
 
 export default router

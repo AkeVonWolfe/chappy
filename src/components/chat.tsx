@@ -4,17 +4,20 @@ import Sidebar from "./sidebar";
 import ChatArea from "./chatArea";
 import type { Channel, Message, User } from "../types";
 
-const storedUser = localStorage.getItem("user");
-const CURRENT_USER: User = storedUser
-  ? JSON.parse(storedUser)
-  : { id: "guest", name: "Guest User" };
-
 export default function ChatApp(): React.ReactElement {
-    const storedUser = localStorage.getItem("user");
-    const CURRENT_USER: User = storedUser
-    ? JSON.parse(storedUser)
-    : { id: "guest", name: "Guest User" };
+  // user info from localStorage
+  const storedUser = localStorage.getItem("user");
+  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
 
+  const CURRENT_USER: User = parsedUser
+    ? {
+        id: parsedUser.userId || parsedUser.id,
+        userId: parsedUser.userId || parsedUser.id,
+        name: parsedUser.name || "Unknown User",
+      }
+    : { id: "guest", userId: "guest", name: "Guest User" };
+
+  //  STATE VARIABLES
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,12 +29,13 @@ export default function ChatApp(): React.ReactElement {
   const [isDirectChat, setIsDirectChat] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Fetch channels
+  // -------------------- FETCH CHANNELS --------------------
   const fetchChannels = async () => {
     try {
       setLoading(true);
       const res = await fetch("http://localhost:1337/channels");
       const data = await res.json();
+
       if (data.success && Array.isArray(data.items)) {
         setChannels(data.items);
         if (!selectedChannel && data.items.length > 0) {
@@ -45,29 +49,37 @@ export default function ChatApp(): React.ReactElement {
     }
   };
 
-  // Fetch users
+  // FETCH USERS 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:1337/users");
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:1337/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
+
       if (data.success && Array.isArray(data.items)) {
         setUsers(data.items);
+      } else {
+        console.error("Failed to fetch users: unexpected response", data);
       }
     } catch (err) {
       console.error("Error fetching users:", err);
     }
   };
 
-  // Fetch channel messages
+  //  FETCH MESSAGES CHANNEL 
   const fetchMessages = async (channelId: string) => {
     try {
       setLoading(true);
       const res = await fetch(`http://localhost:1337/messages/${channelId}`);
       const data = await res.json();
+
       if (data.success && Array.isArray(data.items)) {
         setMessages(data.items);
       } else {
         setMessages([]);
+        console.error("Failed to fetch messages:", data);
       }
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -76,95 +88,115 @@ export default function ChatApp(): React.ReactElement {
     }
   };
 
-  // Fetch direct messages between current user and another
-  const fetchDirectMessages = async (userId: string) => {
-  // remove DynamoDB key prefix if present
-  const cleanUserId = userId.startsWith("USER#") ? userId.replace("USER#", "") : userId;
+  // FETCH MESSAGES (DIRECT CHAT) 
+  const fetchDirectMessages = async (targetId: string) => {
+    try {
+      setLoading(true);
+    const currentId = CURRENT_USER.userId || CURRENT_USER.id;
+    console.log(" Fetching DMs for:", { currentId, targetId });
+    const url = `http://localhost:1337/messages/direct/${currentId}/${targetId}`;
+    console.log(" GET", url);
 
-  try {
-    setLoading(true);
-    const res = await fetch(
-      `http://localhost:1337/messages/direct/${CURRENT_USER.id}/${cleanUserId}`
-    );
-      const data = await res.json();
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log(" Fetched direct messages:", data);
+
       if (data.success && Array.isArray(data.items)) {
+        console.log("Fetched direct messages:", data.items);
         setMessages(data.items);
+        
       } else {
         setMessages([]);
+        console.error("Failed to fetch direct messages:", data);
       }
     } catch (err) {
       console.error("Error fetching direct messages:", err);
     } finally {
       setLoading(false);
     }
+    
   };
 
-  // Fetch on mount
+  //  EFFECTS 
   useEffect(() => {
     fetchChannels();
     fetchUsers();
   }, []);
 
-  // Fetch messages when switching between chat modes
   useEffect(() => {
-    if (isDirectChat && selectedUser) {
-      fetchDirectMessages(selectedUser.sk || selectedUser.id);
-    } else if (!isDirectChat && selectedChannel) {
+    if (selectedChannel) {
+      setIsDirectChat(false);
+      setMessages([]);
       fetchMessages(selectedChannel.id);
     }
-  }, [selectedChannel, selectedUser, isDirectChat]);
+  }, [selectedChannel]);
 
-  // sendMessage handles both channels and DMs
+  // SEND MESSAGE 
   const sendMessage = async (e?: React.FormEvent | React.MouseEvent) => {
-    e?.preventDefault();
-    if (!messageInput.trim()) return;
+  e?.preventDefault();
+  if (!messageInput.trim()) return;
 
-    try {
-      setLoading(true);
-      let url = "";
-      let body = {
-        message: messageInput,
-        senderId: CURRENT_USER.id,
-      };
+  try {
+    setLoading(true);
 
-      if (isDirectChat && selectedUser) {
-        url = `http://localhost:1337/messages/direct/${selectedUser.sk || selectedUser.id}`;
-      } else if (selectedChannel) {
-        url = `http://localhost:1337/messages/${selectedChannel.id}`;
-      } else {
-        return;
-      }
+    const senderId = CURRENT_USER.userId || CURRENT_USER.id;
+    let endpoint = "";
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setMessages((prev) => [...prev, data.item]);
-        setMessageInput("");
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setLoading(false);
+    if (isDirectChat && selectedUser) {
+        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace("USER#", "");
+        const senderId = CURRENT_USER.userId || CURRENT_USER.id;
+      endpoint = `http://localhost:1337/messages/direct/${senderId}/${cleanTargetId}`;
+    } else if (selectedChannel) {
+      // Channel message 
+      endpoint = `http://localhost:1337/messages/${selectedChannel.id}`;
+    } else {
+      console.warn("No target channel or user selected");
+      return;
     }
-  };
 
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: messageInput,
+        senderId,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      setMessageInput("");
+      // Refresh messages after sending
+      if (isDirectChat && selectedUser) {
+        // Refresh direct messages
+        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace(/^USER#/, "");
+        await fetchDirectMessages(cleanTargetId);
+      } else if (selectedChannel) {
+        // Refresh channel messages
+        await fetchMessages(selectedChannel.id);
+      }
+    } else {
+      console.error("Failed to send message:", data);
+    }
+  } catch (err) {
+    console.error("Error sending message:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // CHANNEL MANAGEMENT 
   const createChannel = async () => {};
   const deleteChannel = async (id: string) => {};
 
+  // RENDER 
   return (
     <div className="app-container">
       <Sidebar
         channels={channels}
         selectedChannel={selectedChannel}
-        setSelectedChannel={(ch) => {
-          setIsDirectChat(false);
-          setSelectedChannel(ch);
-        }}
+        setSelectedChannel={setSelectedChannel}
         showCreateChannel={showCreateChannel}
         setShowCreateChannel={setShowCreateChannel}
         newChannelName={newChannelName}

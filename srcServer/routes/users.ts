@@ -108,7 +108,7 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
   }
 
   try {
-    // ✅ Query DynamoDB for a user with this name
+    // Query DynamoDB for a user with this name
     const result = await db.send(
       new QueryCommand({
         TableName: myTable,

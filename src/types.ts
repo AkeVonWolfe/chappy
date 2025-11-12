@@ -1,10 +1,11 @@
 export interface User {
-  id: string;
+  id: string;           // Used locally (normalized id)
+  userId?: string;      // Actual userId returned from backend
   name: string;
-  sk?: string; // unique user key, e.g., "USER#1"
-  pk?: string;
+  sk?: string;          // DynamoDB sort key (e.g. USER#...)
+  pk?: string;          // DynamoDB partition key
   Guest?: boolean;
-  password?: string;
+  password?: string;    // only used during registration/login
 }
 
 export interface Channel {
