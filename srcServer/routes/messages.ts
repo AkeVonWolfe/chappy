@@ -1,9 +1,9 @@
 import express from "express";
 import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
-import { messageSchema, UserSchema } from "../data/validation.js"
-import type { ErrorResponse, OperationResult } from "../data/types.js";
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import { messageSchema } from "../data/validation.js"
+import type { ErrorResponse, OperationResult, SuccessResponse } from "../data/types.js";
+import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 const router: Router = express.Router()
 
@@ -15,7 +15,7 @@ interface MessageBody {
 
 interface MessageItem {
     pk: string       // MESSAGE#USER#{userId}
-    sk: string       // CHANNEL#{channelId}#{timestamp}
+    sk: string       // CHANNEL#{channelId}#{timestamp} or USER#{recipientId}#{timestamp}
     message: string
     senderId: string
     channelId: string
@@ -23,12 +23,185 @@ interface MessageItem {
 }
 
 
-// POST message in Channel
-
+// GET all messages from a channel
 // Route: /messages/channel/:channelId
-router.post("/channel/:channelId", async ( req: Request<{ channelId: string }, {}, MessageBody>, res: Response<OperationResult<MessageItem> |ErrorResponse>) => {
+router.get("/channel/:channelId", async (
+    req: Request<{ channelId: string }>, 
+    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
+) => {
+    const { channelId } = req.params
+    
+    try {
+        const result = await db.send(
+            new QueryCommand({
+                TableName: myTable,
+                IndexName: "GSI1", // Uses GSI with sk as partition key
+                KeyConditionExpression: "begins_with(sk, :skPrefix)",
+                ExpressionAttributeValues: {
+                    ":skPrefix": `CHANNEL#${channelId}#`
+                },
+                ScanIndexForward: true // Sort by timestamp ascending (oldest first)
+            })
+        )
+        
+        const messages = (result.Items || []) as MessageItem[]
+        
+        res.status(200).send({
+            success: true,
+            count: messages.length,
+            items: messages
+        })
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            error: (error as Error).message,
+            message: "Could not retrieve channel messages"
+        })
+    }
+})
 
-    // TODO: put validation as middleware?
+
+// GET all messages sent BY a specific user
+// Route: /messages/user/:userId/sent
+router.get("/user/:userId/sent", async (
+    req: Request<{ userId: string }>, 
+    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
+) => {
+    const { userId } = req.params
+    
+    try {
+        // Query messages sent BY this user (uses primary key)
+        const result = await db.send(
+            new QueryCommand({
+                TableName: myTable,
+                KeyConditionExpression: "pk = :pk",
+                ExpressionAttributeValues: {
+                    ":pk": `MESSAGE#USER#${userId}`
+                },
+                ScanIndexForward: true
+            })
+        )
+        
+        const messages = (result.Items || []) as MessageItem[]
+        
+        res.status(200).send({
+            success: true,
+            count: messages.length,
+            items: messages
+        })
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            error: (error as Error).message,
+            message: "Could not retrieve sent messages"
+        })
+    }
+})
+
+
+// GET all direct messages TO a specific user (received)
+// Route: /messages/user/:userId/received
+router.get("/user/:userId/received", async (
+    req: Request<{ userId: string }>, 
+    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
+) => {
+    const { userId } = req.params
+    
+    try {
+        // Query messages sent TO this user (uses GSI)
+        const result = await db.send(
+            new QueryCommand({
+                TableName: myTable,
+                IndexName: "GSI1", // Uses GSI with sk as partition key
+                KeyConditionExpression: "begins_with(sk, :skPrefix)",
+                ExpressionAttributeValues: {
+                    ":skPrefix": `USER#${userId}#`
+                },
+                ScanIndexForward: true
+            })
+        )
+        
+        const messages = (result.Items || []) as MessageItem[]
+        
+        res.status(200).send({
+            success: true,
+            count: messages.length,
+            items: messages
+        })
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            error: (error as Error).message,
+            message: "Could not retrieve received messages"
+        })
+    }
+})
+
+
+// GET all direct messages for a user (both sent and received)
+// Route: /messages/user/:userId
+router.get("/user/:userId", async (
+    req: Request<{ userId: string }>, 
+    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
+) => {
+    const { userId } = req.params
+    
+    try {
+        // Query for messages sent BY this user (uses primary key)
+        const sentMessages = await db.send(
+            new QueryCommand({
+                TableName: myTable,
+                KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+                ExpressionAttributeValues: {
+                    ":pk": `MESSAGE#USER#${userId}`,
+                    ":skPrefix": "USER#" // Only direct messages, not channel messages
+                },
+                ScanIndexForward: true
+            })
+        )
+        
+        // Query for messages sent TO this user (uses GSI)
+        const receivedMessages = await db.send(
+            new QueryCommand({
+                TableName: myTable,
+                IndexName: "GSI1",
+                KeyConditionExpression: "begins_with(sk, :skPrefix)",
+                ExpressionAttributeValues: {
+                    ":skPrefix": `USER#${userId}#`
+                },
+                ScanIndexForward: true
+            })
+        )
+        
+        // Combine and sort by timestamp
+        const allMessages = [
+            ...(sentMessages.Items || []),
+            ...(receivedMessages.Items || [])
+        ] as MessageItem[]
+        
+        allMessages.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+        
+        res.status(200).send({
+            success: true,
+            count: allMessages.length,
+            items: allMessages
+        })
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            error: (error as Error).message,
+            message: "Could not retrieve user messages"
+        })
+    }
+})
+
+
+// POST message in Channel
+// Route: /messages/channel/:channelId
+router.post("/channel/:channelId", async (
+    req: Request<{ channelId: string }, {}, MessageBody>, 
+    res: Response<OperationResult<MessageItem> | ErrorResponse>
+) => {
     let validateResult = messageSchema.safeParse(req.body)
     
     if (!validateResult.success) {
@@ -46,13 +219,11 @@ router.post("/channel/:channelId", async ( req: Request<{ channelId: string }, {
     const { message, senderId } = validateResult.data
     const { channelId } = req.params
     
-    // Generate timestamp and sorting
     const timestamp = new Date().toISOString()
     
-    // Create the DynamoDB item with proper keys
     const newMessage: MessageItem = {
-        pk: `MESSAGE#USER#${senderId}`,           // Who sent it
-        sk: `CHANNEL#${channelId}#${timestamp}`,  // Where + when
+        pk: `MESSAGE#USER#${senderId}`,
+        sk: `CHANNEL#${channelId}#${timestamp}`,
         message,
         senderId,
         channelId,
@@ -80,9 +251,13 @@ router.post("/channel/:channelId", async ( req: Request<{ channelId: string }, {
     }
 })
 
-// POST direct message (user to user)
-router.post("/direct/:recipientId", async (req: Request<{ recipientId: string }, {}, MessageBody>,res: Response<OperationResult<MessageItem> | ErrorResponse>) => {
 
+// POST direct message (user to user)
+// Route: /messages/direct/:recipientId
+router.post("/direct/:recipientId", async (
+    req: Request<{ recipientId: string }, {}, MessageBody>,
+    res: Response<OperationResult<MessageItem> | ErrorResponse>
+) => {
     let validateResult = messageSchema.safeParse(req.body)
     
     if (!validateResult.success) {
@@ -102,8 +277,8 @@ router.post("/direct/:recipientId", async (req: Request<{ recipientId: string },
     const timestamp = new Date().toISOString()
     
     const newMessage: MessageItem = {
-        pk: `MESSAGE#USER#${senderId}`,        // Who sent it
-        sk: `USER#${recipientId}#${timestamp}`, // To whom + when
+        pk: `MESSAGE#USER#${senderId}`,
+        sk: `USER#${recipientId}#${timestamp}`,
         message,
         senderId,
         channelId: recipientId, // Reusing field for recipient

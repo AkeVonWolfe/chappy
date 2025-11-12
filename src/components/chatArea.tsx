@@ -1,6 +1,7 @@
 import React from "react";
 import type { Channel, Message, User } from "../types";
-
+import MessageList from "./messageList";
+import MessageInput from "./messageInput";
 
 interface ChatAreaProps {
   selectedChannel: Channel | null;
