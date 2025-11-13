@@ -79,45 +79,63 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="sidebar-footer">
-        {showCreateChannel ? (
-          <div className="create-channel-form">
-            <input
-              type="text"
-              placeholder="Channel name"
-              value={newChannelName}
-              onChange={(e) => setNewChannelName(e.target.value)}
-            />
-            <label className="guest-toggle">
-              <input
-                type="checkbox"
-                checked={guestAccess}
-                onChange={(e) => setGuestAccess(e.target.checked)} //  update React state
-              />
-              Guest Access
-            </label>
+      {showCreateChannel ? (
+    <div className="create-channel-form">
+      <input
+        type="text"
+        placeholder="Channel name"
+        value={newChannelName}
+        onChange={(e) => setNewChannelName(e.target.value)}
+      />
+      <label className="guest-toggle">
+        <input
+          type="checkbox"
+          checked={guestAccess}
+          onChange={(e) => setGuestAccess(e.target.checked)}
+        />
+        Guest Access
+      </label>
 
-            <div className="button-group">
-              <button onClick={handleCreateChannel} className="create-btn" disabled={loading}>
-                Create
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateChannel(false);
-                  setNewChannelName("");
-                  setGuestAccess(false); // reset toggle on cancel
-                }}
-                className="cancel-btn"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={() => setShowCreateChannel(true)} className="create-toggle-btn">
-            + Create
-          </button>
-        )}
+      <div className="button-group">
+        <button
+          onClick={handleCreateChannel}
+          className="create-btn"
+          disabled={loading}
+        >
+          Create
+        </button>
+        <button
+          onClick={() => {
+            setShowCreateChannel(false);
+            setNewChannelName("");
+            setGuestAccess(false);
+          }}
+          className="cancel-btn"
+        >
+          Cancel
+        </button>
       </div>
+    </div>
+  ) : (
+    <button
+      onClick={() => setShowCreateChannel(true)}
+      className="create-toggle-btn"
+    >
+      + Create
+    </button>
+  )}
+
+  <button
+    onClick={() => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
+    }}
+    className="logout-btn"
+  >
+    Log out
+  </button>
+</div>
     </div>
   );
 };
