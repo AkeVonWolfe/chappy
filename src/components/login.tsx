@@ -3,6 +3,8 @@ import "./login.css";
 import { useNavigate } from "react-router";
 
 const Login = () => {
+
+    // State variables
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

@@ -42,7 +42,7 @@ const Register = () => {
   };
 
   const goToLogin = () => {
-    navigate("/login");     // navigate back to login
+    navigate("/");     // navigate back to login
   };
 
   return (

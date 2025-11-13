@@ -17,7 +17,6 @@ interface SidebarProps {
   currentUser: User; // current logged-in user info
 }
 
-const isGuest = !localStorage.getItem("token"); // check if user is guest
 
 // Sidebar component definition with props above
 const Sidebar: React.FC<SidebarProps> = ({
@@ -33,9 +32,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   loading,
   currentUser
 }) => {
-
+  
   //  Local state for Guest Access
   const [guestAccess, setGuestAccess] = useState(false);
+  
+  const isGuest = !localStorage.getItem("token"); // check if user is guest to stop access to locked channels
 
   const handleCreateChannel = async () => {
     await createChannel(guestAccess);  // pass guestAccess to creation function

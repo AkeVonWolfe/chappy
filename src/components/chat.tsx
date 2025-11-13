@@ -6,7 +6,7 @@ import type { Channel, Message, User } from "../types";
 
 
 
-export default function ChatApp(): React.ReactElement {
+export default function ChatApp(): React.ReactElement { 
 
   // user info from localStorage
   const storedUser = localStorage.getItem("user");
@@ -48,8 +48,8 @@ export default function ChatApp(): React.ReactElement {
       }
     } catch (error) {
       console.error("Failed to fetch channels:", error);
-    } finally {
-      setLoading(false);
+    } finally {  
+      setLoading(false); // reset loading state spinning loader
     }
   };
 
@@ -191,7 +191,7 @@ export default function ChatApp(): React.ReactElement {
   }
 };
 
-  // CHANNEL MANAGEMENT 
+  // CHANNEL MANAGEMENT FUNCTIONS 
   const createChannel = async (guestAccess: boolean) => {
   if (!newChannelName.trim()) return;  // don't create channel with empty name
 
@@ -202,15 +202,15 @@ export default function ChatApp(): React.ReactElement {
   }
 
   try {
-    setLoading(true);
-    const res = await fetch("http://localhost:1337/channels", {
+    setLoading(true);  // show loading state
+    const res = await fetch("http://localhost:1337/channels", {  
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        name: newChannelName,
+        name: newChannelName,  // channel name
         Guest: guestAccess, //  send real state
       }),
     });
@@ -231,8 +231,8 @@ export default function ChatApp(): React.ReactElement {
 };
 
   const deleteChannel = async (id: string) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
+  const token = localStorage.getItem("token");  // get auth token
+  if (!token) {  // check if logged in
     console.log("You must be logged in to delete a channel!");
     return;
   }
