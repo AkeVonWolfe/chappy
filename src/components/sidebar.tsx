@@ -135,6 +135,50 @@ const Sidebar: React.FC<SidebarProps> = ({
   >
     Log out
   </button>
+
+  <button
+  onClick={async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete your account?"
+    );
+    if (!confirmDelete) return;
+
+    const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    const userId = user?.userId || user?.id;
+
+    if (!userId || !token) {
+      console.log("You must be logged in to delete your account.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:1337/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        console.log("Your account has been deleted.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/";
+      } else {
+        console.log(data.message || "Failed to delete account.");
+      }
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      console.log("Something went wrong while deleting your account.");
+    }
+  }}
+  className="delete-account-btn"
+>
+  Delete Account
+</button>
 </div>
     </div>
   );

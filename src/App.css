@@ -231,3 +231,20 @@
 .logout-btn:hover {
   background-color: #c0392b;
 }
+
+.delete-account-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s ease;
+}
+
+.delete-account-btn:hover {
+  background-color: #d63031;
+}

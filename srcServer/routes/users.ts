@@ -4,7 +4,7 @@ import type { Request, Response, Router } from "express";
 import { db, myTable } from "../data/db.js";
 import type { ErrorResponse, OperationResult, SuccessResponse, IdParam, GetResult, LoginResponse } from "../data/types.js"
 import bcrypt from "bcrypt"
-import { createToken } from "../data/auth.js"
+import { createToken, verifyToken } from "../data/auth.js"
 
 
 const router: Router = express.Router()
@@ -48,50 +48,84 @@ router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>
 
 
 // DELETE user by id
-router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<User> | ErrorResponse>) => {
+router.delete("/:userId", async (req, res) => {
   try {
-    const userId = req.params.id;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).send({
+        success: false,
+        message: "Missing authorization header",
+      });
+    }
 
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).send({
+        success: false,
+        message: "Invalid token format",
+      });
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(403).send({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
+
+    const { userId } = req.params;
+
+    //  Only allow deleting own account
+    if (decoded.userId !== userId) {
+      return res.status(403).send({
+        success: false,
+        message: "You are not authorized to delete this account",
+      });
+    }
+
+    //  Check if user exists
     const result = await db.send(
+      new GetCommand({
+        TableName: myTable,
+        Key: {
+          pk: "USERS",
+          sk: `USER#${userId}`,
+        },
+      })
+    );
+
+    if (!result.Item) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    //  Delete user
+    await db.send(
       new DeleteCommand({
         TableName: myTable,
         Key: {
           pk: "USERS",
           sk: `USER#${userId}`,
         },
-        ConditionExpression: "attribute_exists(pk)",
-        ReturnValues: "ALL_OLD",
       })
     );
-    console.log("Deleting from table:", myTable)
-
-    const deletedUser: User = result.Attributes as User;
 
     res.status(200).send({
       success: true,
-      message: "User deleted successfully",
-      item: deletedUser,
+      message: "User account deleted successfully",
     });
-
-  } catch (error: any) {
-
-    console.log(" Delete user error:", error)
-
-    if (error.name === "ConditionalCheckFailedException") {
-      return res.status(404).send({
-        success: false,
-        error: "User not found",
-        message: "Failed to delete user",
-      })
-    }
-
+  } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).send({
       success: false,
-      error: error.message,
-      message: "Failed to delete user",
+      message: "Could not delete user account",
+      error: (error as Error).message,
     });
   }
-})
+});
 
 
 // Login user
