@@ -97,8 +97,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         </div>
       </div>
-
-      <MessageList messages={messages} currentUser={currentUser} />
+    
+      {/* prop passing for message */}
+      <MessageList
+       messages={messages}
+       currentUser={currentUser}
+       users={users} // Pass users array down
+/>
 
       <MessageInput
         messageInput={messageInput}

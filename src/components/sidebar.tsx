@@ -60,20 +60,22 @@ const Sidebar: React.FC<SidebarProps> = ({
               }}
               title={locked ? "Login required to access this channel" : ""}
       >
-          <span>{channel.name}</span>
-
-          {!locked && channel.ownerId === currentUser.id && (
-            <button
-            className="delete-button"
-            onClick={(e) => {
-            e.stopPropagation();
-            deleteChannel(channel.id);
-          }}
-        >
-          ×
-        </button>
-      )}
-    </div>
+          <div className="channel-item-content">
+           <span className="channel-name">{channel.name}</span>
+            {!locked && channel.ownerId === currentUser.id && (
+              <button
+                className="delete-button"
+                onClick={(e) => {
+                e.stopPropagation();
+                deleteChannel(channel.id);
+              }}
+                title="Delete channel"
+      >
+              Delete 
+            </button>
+    )}
+  </div>
+</div>
   );
 })}
       </div>
