@@ -187,25 +187,30 @@ export default function ChatApp(): React.ReactElement {
 };
 
   // CHANNEL MANAGEMENT 
-  const createChannel = async () => {
+  const createChannel = async (guestAccess: boolean) => {
   if (!newChannelName.trim()) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.log("You must be logged in to create a channel!");
+    return;
+  }
 
   try {
     setLoading(true);
-
-    const Guest = (window as any).newChannelGuest || false;
     const res = await fetch("http://localhost:1337/channels", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         name: newChannelName,
-        ownerId: CURRENT_USER.userId || CURRENT_USER.id,
-        Guest,
+        Guest: guestAccess, //  send real state
       }),
     });
 
     const data = await res.json();
-
     if (data.success) {
       setChannels((prev) => [...prev, data.item]);
       setNewChannelName("");

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Channel, User } from "../types";
 
 interface SidebarProps {
@@ -9,7 +9,7 @@ interface SidebarProps {
   setShowCreateChannel: React.Dispatch<React.SetStateAction<boolean>>;
   newChannelName: string;
   setNewChannelName: React.Dispatch<React.SetStateAction<string>>;
-  createChannel: () => Promise<void>;
+  createChannel: (guestAccess: boolean) => Promise<void>; //  pass guestAccess to backend
   deleteChannel: (channelId: string) => Promise<void>;
   loading: boolean;
   currentUser: User;
@@ -28,6 +28,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   loading,
   currentUser
 }) => {
+
+  //  Local state for Guest Access
+  const [guestAccess, setGuestAccess] = useState(false);
+
+  const handleCreateChannel = async () => {
+    await createChannel(guestAccess);
+    setGuestAccess(false); // reset after creation
+  };
+
   return (
     <div className="sidebar">
       <div className="sidebar-header">
@@ -67,22 +76,23 @@ const Sidebar: React.FC<SidebarProps> = ({
               onChange={(e) => setNewChannelName(e.target.value)}
             />
             <label className="guest-toggle">
-             <input
-              type="checkbox"
-              checked={!!(window as any).newChannelGuest}
-              onChange={(e) => ((window as any).newChannelGuest = e.target.checked)}
+              <input
+                type="checkbox"
+                checked={guestAccess}
+                onChange={(e) => setGuestAccess(e.target.checked)} //  update React state
               />
-            Guest Access
+              Guest Access
             </label>
 
             <div className="button-group">
-              <button onClick={createChannel} className="create-btn" disabled={loading}>
+              <button onClick={handleCreateChannel} className="create-btn" disabled={loading}>
                 Create
               </button>
               <button
                 onClick={() => {
                   setShowCreateChannel(false);
                   setNewChannelName("");
+                  setGuestAccess(false); // reset toggle on cancel
                 }}
                 className="cancel-btn"
               >
