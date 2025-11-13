@@ -224,7 +224,39 @@ export default function ChatApp(): React.ReactElement {
     setLoading(false);
   }
 };
-  const deleteChannel = async (id: string) => {};
+
+  const deleteChannel = async (id: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.log("You must be logged in to delete a channel!");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete this channel?")) return;
+
+  try {
+    setLoading(true);
+    const res = await fetch(`http://localhost:1337/channels/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      setChannels((prev) => prev.filter((ch) => ch.id !== id));
+      if (selectedChannel?.id === id) setSelectedChannel(null);
+    } else {
+      console.error("Failed to delete channel:", data);
+      console.log(data.message || "Failed to delete channel");
+    }
+  } catch (err) {
+    console.error("Error deleting channel:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // RENDER 
   return (

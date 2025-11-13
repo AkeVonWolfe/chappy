@@ -213,80 +213,86 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // Delete channel
-// router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
-//   try {
-//     const channelId = req.params.id
-    
-//     // TODO: Get userId from authentication middleware
-//     const { userId } = req.body
+router.delete("/:id", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).send({
+        success: false,
+        message: "Missing authorization header",
+      });
+    }
 
-//     if (!userId) {
-//       return res.status(401).send({
-//         success: false,
-//         message: "Authentication required",
-//         error: "userId is required to delete a channel",
-//       })
-//     }
+    const token = authHeader?.split(" ")[1];
 
-//     // Fetch the channel to verify ownership
-//     const getResult = await db.send(
-//       new GetCommand({
-//         TableName: myTable,
-//         Key: {
-//           pk: "CHANNELS",
-//           sk: `CHANNEL#${channelId}`,
-//         },
-//       })
-//     )
+    if (!token) {
+      return res.status(401).send({
+      success: false,
+      message: "Missing or invalid authorization token",
+  });
+}
 
-//     const existingChannel = getResult.Item as Channel | undefined
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(403).send({
+      success: false,
+      message: "Invalid or expired token",
+  });
+}
 
-//     if (!existingChannel) {
-//       return res.status(404).send({
-//         success: false,
-//         message: "Channel not found",
-//         error: "Channel does not exist",
-//       })
-//     }
+    const channelId = req.params.id;
 
-//     // verify ownership
-//     const ownerId = existingChannel.owner.replace("USER#", "")
-//     if (ownerId !== userId) {
-//       return res.status(403).send({
-//         success: false,
-//         message: "Forbidden",
-//         error: "You can only delete channels you created",
-//       })
-//     }
+    //  Fetch the channel to verify ownership
+    const result = await db.send(
+      new GetCommand({
+        TableName: myTable,
+        Key: {
+          pk: "CHANNELS",
+          sk: `CHANNEL#${channelId}`,
+        },
+      })
+    );
 
-//     // Delete the channel
-//     const deleteResult = await db.send(
-//       new DeleteCommand({
-//         TableName: myTable,
-//         Key: {
-//           pk: existingChannel.pk,
-//           sk: existingChannel.sk,
-//         },
-//         ConditionExpression: "attribute_exists(sk)",
-//         ReturnValues: "ALL_OLD",
-//       })
-//     )
+    const channel = result.Item;
+    if (!channel) {
+      return res.status(404).send({
+        success: false,
+        message: "Channel not found",
+      });
+    }
 
-//     const deletedChannel: Channel = deleteResult.Attributes as Channel
+    //  Only owner can delete
+    if (channel.ownerId !== decoded.userId) {
+      return res.status(403).send({
+        success: false,
+        message: "You are not authorized to delete this channel",
+      });
+    }
 
-//     res.status(200).send({
-//       success: true,
-//       message: "Channel deleted successfully",
-//       item: toChannelResponse(deletedChannel),
-//     })
-//   } catch (error) {
-//     console.error("Error deleting channel:", error)
-//     res.status(500).send({
-//       success: false,
-//       error: (error as Error).message,
-//       message: "Failed to delete channel",
-//     })
-//   }
-// })
+    await db.send(
+      new DeleteCommand({
+        TableName: myTable,
+        Key: {
+          pk: "CHANNELS",
+          sk: `CHANNEL#${channelId}`,
+        },
+      })
+    );
+
+    res.status(200).send({
+      success: true,
+      message: "Channel deleted successfully",
+      id: channelId,
+    });
+  } catch (error) {
+    console.error("Error deleting channel:", error);
+    res.status(500).send({
+      success: false,
+      message: "Could not delete channel",
+      error: (error as Error).message,
+    });
+  }
+});
+
 
 export default router
