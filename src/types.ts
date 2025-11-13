@@ -12,6 +12,7 @@ export interface Channel {
   id: string;
   name: string;
   ownerId?: string;
+   Guest?: boolean;
 }
 
 export interface Message {

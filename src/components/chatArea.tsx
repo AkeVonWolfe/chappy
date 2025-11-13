@@ -34,6 +34,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   setIsDirectChat,
   fetchDirectMessages,
 }) => {
+  //  Check if user is a guest (no token in storage)
+  const isGuest = !localStorage.getItem("token");
+
   // Handle case when no channel or DM selected
   if (!selectedChannel && !isDirectChat) {
     return (
@@ -53,6 +56,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               : selectedChannel?.name ?? "Select a channel"}
           </h2>
 
+          {/* ✅ User avatars (profile badges) */}
           <div className="user-group">
             {users
               .filter((user) => {
@@ -60,29 +64,36 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 const currentId = currentUser.userId || currentUser.id;
                 return targetId !== currentId; // hide self
               })
-              .map((user) => (
-                <div
-                  key={user.sk || user.id}
-                  className="avatar"
-                  onClick={() => {
-                    let rawId = user.sk ?? user.id;
-                    if (!rawId) return;
+              .map((user) => {
+                const targetId = user.sk ?? user.id;
+                const locked = isGuest; //  block all clicks if guest
 
-                    // Remove USER# prefix so backend gets plain ID
-                    const cleanId = rawId.replace(/^USER#/, "");
+                return (
+                  <div
+                    key={targetId}
+                    className={`avatar ${locked ? "locked" : ""}`}
+                    onClick={() => {
+                      if (locked) return; //  guests can’t click avatars
+                      if (!targetId) return;
 
-                    const currentId = currentUser.userId || currentUser.id;
-                    if (cleanId === currentId) return; // skip self
+                      const cleanId = targetId.replace(/^USER#/, "");
+                      const currentId = currentUser.userId || currentUser.id;
+                      if (cleanId === currentId) return;
 
-                    setIsDirectChat(true);
-                    setSelectedUser(user);
-                    fetchDirectMessages(cleanId); // now sends correct ID (e.g., "2")
-                  }}
-                  title={`Chat with ${user.name}`}
-                >
-                  {user.name[0]?.toUpperCase()}
-                </div>
-              ))}
+                      setIsDirectChat(true);
+                      setSelectedUser(user);
+                      fetchDirectMessages(cleanId);
+                    }}
+                    title={
+                      locked
+                        ? "Login required to start direct messages"
+                        : `Chat with ${user.name}`
+                    }
+                  >
+                    {user.name[0]?.toUpperCase()}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>

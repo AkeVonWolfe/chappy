@@ -4,6 +4,8 @@ import Sidebar from "./sidebar";
 import ChatArea from "./chatArea";
 import type { Channel, Message, User } from "../types";
 
+
+
 export default function ChatApp(): React.ReactElement {
   // user info from localStorage
   const storedUser = localStorage.getItem("user");

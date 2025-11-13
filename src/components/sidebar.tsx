@@ -15,6 +15,8 @@ interface SidebarProps {
   currentUser: User;
 }
 
+const isGuest = !localStorage.getItem("token");
+
 const Sidebar: React.FC<SidebarProps> = ({
   channels,
   selectedChannel,
@@ -44,26 +46,36 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="sidebar-list">
-        {channels.map((channel) => (
-          <div
-            key={channel.id}
-            className={`sidebar-item ${selectedChannel?.id === channel.id ? "active" : ""}`}
-            onClick={() => setSelectedChannel(channel)}
-          >
-            <span>{channel.name}</span>
-            {channel.ownerId === currentUser.id && (
-              <button
-                className="delete-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChannel(channel.id);
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+        {channels.map((channel) => {
+          const locked = !channel.Guest && isGuest; // only block if Guest=false and user is guest
+          return (
+            <div
+              key={channel.id}
+              className={`sidebar-item ${selectedChannel?.id === channel.id ? "active" : ""} ${
+              locked ? "locked" : ""
+              }`}
+              onClick={() => {
+              if (locked) return; //  prevent guest click
+              setSelectedChannel(channel);
+              }}
+              title={locked ? "Login required to access this channel" : ""}
+      >
+          <span>{channel.name}</span>
+
+          {!locked && channel.ownerId === currentUser.id && (
+            <button
+            className="delete-button"
+            onClick={(e) => {
+            e.stopPropagation();
+            deleteChannel(channel.id);
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+})}
       </div>
 
       <div className="sidebar-footer">

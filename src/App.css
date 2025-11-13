@@ -205,3 +205,12 @@
   margin-top: 8px;
   font-size: 0.9rem;
 }
+.sidebar-item.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.avatar.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
