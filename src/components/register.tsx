@@ -2,45 +2,47 @@ import React, { useState } from "react";
 import "./login.css";
 import { useNavigate } from "react-router";
 
+
+// Registration component
 const Register = () => {
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [name, setName] = useState("");  // username state
+  const [password, setPassword] = useState("");  // password state
+  const [loading, setLoading] = useState(false);  // loading state
+  const navigate = useNavigate(); // navigation hook
 
   const handleRegister = async () => {
-    if (!name || !password) {
-      console.log("Please fill in both fields");
+    if (!name || !password) { 
+      console.log("Please fill in both fields");  // validation check
       return;
     }
 
     try {
-      setLoading(true);
+      setLoading(true); // set loading state
       const res = await fetch("http://localhost:1337/register/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, password }),
       });
 
-      const data = await res.json();
+      const data = await res.json(); 
 
-      if (!res.ok || !data.success) {
-        console.log(data.message || "Failed to register user");
+      if (!res.ok || !data.success) { 
+        console.log(data.message || "Failed to register user");  // error handling
         return;
       }
 
       console.log("Registered successfully! You can now log in.");
-      navigate("/");
+      navigate("/");    // redirect to login
     } catch (error) {
       console.error("Error registering:", error);
       console.log("Registration failed");
     } finally {
-      setLoading(false);
+      setLoading(false);  // reset loading state
     }
   };
 
   const goToLogin = () => {
-    navigate("/login");
+    navigate("/login");     // navigate back to login
   };
 
   return (
@@ -48,7 +50,7 @@ const Register = () => {
       <h1>Create Account</h1>
 
       <div className="input-group">
-        <label htmlFor="name">Username</label>
+        <label htmlFor="name">Username</label>  
         <input
           type="text"
           id="name"
@@ -73,8 +75,9 @@ const Register = () => {
         <button className="btn-back" onClick={goToLogin}>
           Back to Login
         </button>
-        <button className="btn-register" onClick={handleRegister} disabled={loading}>
-          {loading ? "Registering..." : "Register"}
+        {/* disable while loading */}
+        <button className="btn-register" onClick={handleRegister} disabled={loading}> 
+          {loading ? "Registering..." : "Register"} 
         </button>
       </div>
     </div>

@@ -1,11 +1,11 @@
 import React from "react";
 
-
+ // Props interface for MessageInput component
 interface MessageInputProps {
-  messageInput: string;
-  setMessageInput: (v: string) => void;
-  sendMessage: (e?: React.FormEvent | React.MouseEvent) => void;
-  loading: boolean;
+  messageInput: string;  // current input value
+  setMessageInput: (v: string) => void;  // setter for input value
+  sendMessage: (e?: React.FormEvent | React.MouseEvent) => void;  // function to send message
+  loading: boolean;  // loading state
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -21,13 +21,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
         placeholder="Type a message..."
         value={messageInput}
         onChange={(e) => setMessageInput(e.target.value)}
-        disabled={loading}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage(e)}
+        disabled={loading} // disable input if loading
+        onKeyDown={(e) => e.key === "Enter" && sendMessage(e)} // send on Enter 
       />
       <button
         className="send-btn"
-        onClick={sendMessage}
-        disabled={loading || !messageInput.trim()}
+        onClick={sendMessage} // send message on click
+        disabled={loading || !messageInput.trim()}  // disable if loading or empty
       >
         
       </button>

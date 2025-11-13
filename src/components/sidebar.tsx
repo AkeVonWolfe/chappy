@@ -1,22 +1,25 @@
 import React, { useState } from "react";
 import type { Channel, User } from "../types";
 
+
+// Props interface for Sidebar component
 interface SidebarProps {
-  channels: Channel[];
-  selectedChannel: Channel | null;
-  setSelectedChannel: React.Dispatch<React.SetStateAction<Channel | null>>;
-  showCreateChannel: boolean;
-  setShowCreateChannel: React.Dispatch<React.SetStateAction<boolean>>;
-  newChannelName: string;
-  setNewChannelName: React.Dispatch<React.SetStateAction<string>>;
+  channels: Channel[];  // list of channels
+  selectedChannel: Channel | null; // currently selected channel
+  setSelectedChannel: React.Dispatch<React.SetStateAction<Channel | null>>; // setter for selected channel
+  showCreateChannel: boolean;  // whether to show create channel form
+  setShowCreateChannel: React.Dispatch<React.SetStateAction<boolean>>; // setter for show create channel form
+  newChannelName: string; // name for new channel
+  setNewChannelName: React.Dispatch<React.SetStateAction<string>>; // setter for new channel name
   createChannel: (guestAccess: boolean) => Promise<void>; //  pass guestAccess to backend
-  deleteChannel: (channelId: string) => Promise<void>;
-  loading: boolean;
-  currentUser: User;
+  deleteChannel: (channelId: string) => Promise<void>; // function to delete a channel
+  loading: boolean; // loading state for API requests
+  currentUser: User; // current logged-in user info
 }
 
-const isGuest = !localStorage.getItem("token");
+const isGuest = !localStorage.getItem("token"); // check if user is guest
 
+// Sidebar component definition with props above
 const Sidebar: React.FC<SidebarProps> = ({
   channels,
   selectedChannel,
@@ -35,8 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [guestAccess, setGuestAccess] = useState(false);
 
   const handleCreateChannel = async () => {
-    await createChannel(guestAccess);
-    setGuestAccess(false); // reset after creation
+    await createChannel(guestAccess);  // pass guestAccess to creation function
+    setGuestAccess(false); // reset guest access after creation
   };
 
   return (
@@ -51,8 +54,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           return (
             <div
               key={channel.id}
-              className={`sidebar-item ${selectedChannel?.id === channel.id ? "active" : ""} ${
-              locked ? "locked" : ""
+              className={`sidebar-item ${selectedChannel?.id === channel.id ? "active" : ""} ${  // add locked class
+              locked ? "locked" : ""  // disable click if locked
               }`}
               onClick={() => {
               if (locked) return; //  prevent guest click
@@ -62,12 +65,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
           <div className="channel-item-content">
            <span className="channel-name">{channel.name}</span>
-            {!locked && channel.ownerId === currentUser.id && (
+            {!locked && channel.ownerId === currentUser.id && ( // show delete button only for owners
               <button
                 className="delete-button"
                 onClick={(e) => {
                 e.stopPropagation();
-                deleteChannel(channel.id);
+                deleteChannel(channel.id);  // call delete function with channel id
               }}
                 title="Delete channel"
       >
@@ -85,34 +88,34 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div className="create-channel-form">
       <input
         type="text"
-        placeholder="Channel name"
-        value={newChannelName}
-        onChange={(e) => setNewChannelName(e.target.value)}
+        placeholder="Channel name" // input for new channel name
+        value={newChannelName}  // bind to state
+        onChange={(e) => setNewChannelName(e.target.value)} // update state on change
       />
       <label className="guest-toggle">
         <input
-          type="checkbox"
-          checked={guestAccess}
-          onChange={(e) => setGuestAccess(e.target.checked)}
+          type="checkbox" // toggle for guest access
+          checked={guestAccess} // bind to state
+          onChange={(e) => setGuestAccess(e.target.checked)} // update state on change
         />
         Guest Access
       </label>
 
       <div className="button-group">
         <button
-          onClick={handleCreateChannel}
-          className="create-btn"
-          disabled={loading}
+          onClick={handleCreateChannel} // create channel on click
+          className="create-btn" 
+          disabled={loading} // disable while loading
         >
           Create
         </button>
         <button
           onClick={() => {
-            setShowCreateChannel(false);
-            setNewChannelName("");
-            setGuestAccess(false);
+            setShowCreateChannel(false); // cancel creation
+            setNewChannelName(""); // reset name
+            setGuestAccess(false); // reset guest access
           }}
-          className="cancel-btn"
+          className="cancel-btn" 
         >
           Cancel
         </button>
@@ -120,8 +123,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     </div>
   ) : (
     <button
-      onClick={() => setShowCreateChannel(true)}
-      className="create-toggle-btn"
+      onClick={() => setShowCreateChannel(true)} // show creation form
+      className="create-toggle-btn" 
     >
       + Create
     </button>
@@ -129,9 +132,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   <button
     onClick={() => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/";
+      localStorage.removeItem("token"); // remove token on logout
+      localStorage.removeItem("user"); // remove user data on logout
+      window.location.href = "/"; // redirect to login
     }}
     className="logout-btn"
   >
@@ -140,17 +143,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   <button
   onClick={async () => {
-    const confirmDelete = window.confirm(
+    const confirmDelete = window.confirm( // confirm before deleting replace this with real valdiation message
       "Are you sure you want to permanently delete your account?"
     );
-    if (!confirmDelete) return;
+    if (!confirmDelete) return; // abort if not confirmed
 
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
-    const user = userStr ? JSON.parse(userStr) : null;
-    const userId = user?.userId || user?.id;
+    const token = localStorage.getItem("token"); // get auth token
+    const userStr = localStorage.getItem("user");  // get user data
+    const user = userStr ? JSON.parse(userStr) : null; // parse user data
+    const userId = user?.userId || user?.id; // extract user ID
 
-    if (!userId || !token) {
+    if (!userId || !token) {  // check if user ID and token exist
       console.log("You must be logged in to delete your account.");
       return;
     }
@@ -164,11 +167,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success) { // check if deletion was successful
         console.log("Your account has been deleted.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.location.href = "/";
+        localStorage.removeItem("token"); // remove token on account deletion
+        localStorage.removeItem("user"); // remove user data on account deletion
+        window.location.href = "/"; // redirect to login
       } else {
         console.log(data.message || "Failed to delete account.");
       }

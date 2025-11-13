@@ -7,29 +7,31 @@ import type { Channel, Message, User } from "../types";
 
 
 export default function ChatApp(): React.ReactElement {
+
   // user info from localStorage
   const storedUser = localStorage.getItem("user");
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
 
+  // current user object if logged in, else guest user
   const CURRENT_USER: User = parsedUser
     ? {
         id: parsedUser.userId || parsedUser.id,
         userId: parsedUser.userId || parsedUser.id,
-        name: parsedUser.name || "Unknown User",
+        name: parsedUser.name || "Guest User",
       }
-    : { id: "guest", userId: "guest", name: "Guest User" };
+    : { id: "guest", userId: "guest", name: "Guest User" };  // guest user
 
   //  STATE VARIABLES
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [newChannelName, setNewChannelName] = useState("");
-  const [showCreateChannel, setShowCreateChannel] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isDirectChat, setIsDirectChat] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [channels, setChannels] = useState<Channel[]>([]);  // list of all channels
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);  // which channel is selected
+  const [messages, setMessages] = useState<Message[]>([]);  // current messages in selected channel or DM
+  const [messageInput, setMessageInput] = useState(""); // typed in message box
+  const [newChannelName, setNewChannelName] = useState(""); // typed in new channel box
+  const [showCreateChannel, setShowCreateChannel] = useState(false); // toggle create channel form
+  const [loading, setLoading] = useState(false);  //show api request loading state
+  const [users, setUsers] = useState<User[]>([]); // list of all users for DMs
+  const [isDirectChat, setIsDirectChat] = useState(false); // whether in DM mode
+  const [selectedUser, setSelectedUser] = useState<User | null>(null); // who user is in DM
 
   // -------------------- FETCH CHANNELS --------------------
   const fetchChannels = async () => {
@@ -38,10 +40,10 @@ export default function ChatApp(): React.ReactElement {
       const res = await fetch("http://localhost:1337/channels");
       const data = await res.json();
 
-      if (data.success && Array.isArray(data.items)) {
-        setChannels(data.items);
-        if (!selectedChannel && data.items.length > 0) {
-          setSelectedChannel(data.items[0]);
+      if (data.success && Array.isArray(data.items)) {  // valid data
+        setChannels(data.items); 
+        if (!selectedChannel && data.items.length > 0) {  
+          setSelectedChannel(data.items[0]);  // select first channel by default
         }
       }
     } catch (error) {
@@ -54,13 +56,13 @@ export default function ChatApp(): React.ReactElement {
   // FETCH USERS 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token");  // get auth token from storage
       const res = await fetch("http://localhost:1337/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
 
-      if (data.success && Array.isArray(data.items)) {
+      if (data.success && Array.isArray(data.items)) {  // valid data
         setUsers(data.items);
       } else {
         console.error("Failed to fetch users: unexpected response", data);
@@ -74,7 +76,7 @@ export default function ChatApp(): React.ReactElement {
   const fetchMessages = async (channelId: string) => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:1337/messages/${channelId}`);
+      const res = await fetch(`http://localhost:1337/messages/${channelId}`); // fetch messages for channel
       const data = await res.json();
 
       if (data.success && Array.isArray(data.items)) {
@@ -96,7 +98,7 @@ export default function ChatApp(): React.ReactElement {
       setLoading(true);
     const currentId = CURRENT_USER.userId || CURRENT_USER.id;
     console.log(" Fetching DMs for:", { currentId, targetId });
-    const url = `http://localhost:1337/messages/direct/${currentId}/${targetId}`;
+    const url = `http://localhost:1337/messages/direct/${currentId}/${targetId}`;  // fetch direct messages for DM
     console.log(" GET", url);
 
     const res = await fetch(url);
@@ -119,34 +121,35 @@ export default function ChatApp(): React.ReactElement {
     
   };
 
-  //  EFFECTS 
+  //  EFFECTS, runs at start
   useEffect(() => {
-    fetchChannels();
-    fetchUsers();
-  }, []);
+    fetchChannels(); // load channels on start
+    fetchUsers();  // load users on start
+  }, []); // stop loop
 
+    // EFFECT, when selectedChannel changes, fetch its messages
   useEffect(() => {
     if (selectedChannel) {
-      setIsDirectChat(false);
-      setMessages([]);
-      fetchMessages(selectedChannel.id);
+      setIsDirectChat(false); // switch to channel mode
+      setMessages([]);  // clear old messages
+      fetchMessages(selectedChannel.id);  // load messages for new channel
     }
-  }, [selectedChannel]);
+  }, [selectedChannel]); // stop loop
 
   // SEND MESSAGE 
   const sendMessage = async (e?: React.FormEvent | React.MouseEvent) => {
   e?.preventDefault();
-  if (!messageInput.trim()) return;
+  if (!messageInput.trim()) return;  // don't send empty messages
 
   try {
-    setLoading(true);
+    setLoading(true);  
 
-    const senderId = CURRENT_USER.userId || CURRENT_USER.id;
-    let endpoint = "";
+    const senderId = CURRENT_USER.userId || CURRENT_USER.id;  // get current user ID
+    let endpoint = ""; // api endpoint to send message to
 
-    if (isDirectChat && selectedUser) {
-        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace("USER#", "");
-        const senderId = CURRENT_USER.userId || CURRENT_USER.id;
+    if (isDirectChat && selectedUser) {   // Direct message
+        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace("USER#", "");  // clean target user ID
+        const senderId = CURRENT_USER.userId || CURRENT_USER.id;   // get sender ID
       endpoint = `http://localhost:1337/messages/direct/${senderId}/${cleanTargetId}`;
     } else if (selectedChannel) {
       // Channel message 
@@ -172,7 +175,7 @@ export default function ChatApp(): React.ReactElement {
       // Refresh messages after sending
       if (isDirectChat && selectedUser) {
         // Refresh direct messages
-        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace(/^USER#/, "");
+        const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace(/^USER#/, "");  // clean target ID
         await fetchDirectMessages(cleanTargetId);
       } else if (selectedChannel) {
         // Refresh channel messages
@@ -190,9 +193,9 @@ export default function ChatApp(): React.ReactElement {
 
   // CHANNEL MANAGEMENT 
   const createChannel = async (guestAccess: boolean) => {
-  if (!newChannelName.trim()) return;
+  if (!newChannelName.trim()) return;  // don't create channel with empty name
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token");  // get auth token to check if guest
   if (!token) {
     console.log("You must be logged in to create a channel!");
     return;
@@ -213,17 +216,17 @@ export default function ChatApp(): React.ReactElement {
     });
 
     const data = await res.json();
-    if (data.success) {
-      setChannels((prev) => [...prev, data.item]);
-      setNewChannelName("");
-      setShowCreateChannel(false);
+    if (data.success) {  // channel created
+      setChannels((prev) => [...prev, data.item]);  // add new channel to list
+      setNewChannelName("");  // clear input box
+      setShowCreateChannel(false);  // hide create form
     } else {
       console.error("Failed to create channel:", data);
     }
   } catch (err) {
     console.error("Error creating channel:", err);
   } finally {
-    setLoading(false);
+    setLoading(false); 
   }
 };
 
@@ -234,10 +237,10 @@ export default function ChatApp(): React.ReactElement {
     return;
   }
 
-  if (!confirm("Are you sure you want to delete this channel?")) return;
+  if (!confirm("Are you sure you want to delete this channel?")) return;  // confirm deletion, change to valdid ui later
 
   try {
-    setLoading(true);
+    setLoading(true); // show loading state
     const res = await fetch(`http://localhost:1337/channels/${id}`, {
       method: "DELETE",
       headers: {
@@ -246,9 +249,9 @@ export default function ChatApp(): React.ReactElement {
     });
 
     const data = await res.json();
-    if (data.success) {
-      setChannels((prev) => prev.filter((ch) => ch.id !== id));
-      if (selectedChannel?.id === id) setSelectedChannel(null);
+    if (data.success) {  // channel deleted
+      setChannels((prev) => prev.filter((ch) => ch.id !== id));  // remove from list
+      if (selectedChannel?.id === id) setSelectedChannel(null);  // clear selection if deleted
     } else {
       console.error("Failed to delete channel:", data);
       console.log(data.message || "Failed to delete channel");
@@ -260,9 +263,10 @@ export default function ChatApp(): React.ReactElement {
   }
 };
 
-  // RENDER 
+  // RENDER the chat app and props to children, change to zustand later
   return (
     <div className="app-container">
+    
       <Sidebar
         channels={channels}
         selectedChannel={selectedChannel}
@@ -276,7 +280,7 @@ export default function ChatApp(): React.ReactElement {
         loading={loading}
         currentUser={CURRENT_USER}
       />
-
+   
       <ChatArea
         selectedChannel={selectedChannel}
         messages={messages}

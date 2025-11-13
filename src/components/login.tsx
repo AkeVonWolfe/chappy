@@ -9,7 +9,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    if (!name || !password) {
+    if (!name || !password) {  //  validate inputs
       console.log("Please enter both name and password.");
       return;
     }
@@ -24,7 +24,7 @@ const Login = () => {
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!res.ok || !data.success) {  // check if login was successful
         console.log(data.message || "Invalid credentials");
         return;
       }
@@ -38,7 +38,7 @@ const Login = () => {
       console.error("Login error:", err);
       console.log("Login failed, please try again.");
     } finally {
-      setLoading(false);
+      setLoading(false);  // reset loading state
     }
   };
 
@@ -48,9 +48,9 @@ const Login = () => {
     navigate("/chat");
   };
 
-  const handleRegister = () => {
-    navigate("/register");
-  };
+//   const handleRegister = () => {
+//     navigate("/register");
+//   };
 
   return (
     <>
