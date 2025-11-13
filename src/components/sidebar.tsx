@@ -66,6 +66,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               value={newChannelName}
               onChange={(e) => setNewChannelName(e.target.value)}
             />
+            <label className="guest-toggle">
+             <input
+              type="checkbox"
+              checked={!!(window as any).newChannelGuest}
+              onChange={(e) => ((window as any).newChannelGuest = e.target.checked)}
+              />
+            Guest Access
+            </label>
+
             <div className="button-group">
               <button onClick={createChannel} className="create-btn" disabled={loading}>
                 Create

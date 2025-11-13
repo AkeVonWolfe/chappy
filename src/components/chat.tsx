@@ -187,7 +187,38 @@ export default function ChatApp(): React.ReactElement {
 };
 
   // CHANNEL MANAGEMENT 
-  const createChannel = async () => {};
+  const createChannel = async () => {
+  if (!newChannelName.trim()) return;
+
+  try {
+    setLoading(true);
+
+    const Guest = (window as any).newChannelGuest || false;
+    const res = await fetch("http://localhost:1337/channels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newChannelName,
+        ownerId: CURRENT_USER.userId || CURRENT_USER.id,
+        Guest,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      setChannels((prev) => [...prev, data.item]);
+      setNewChannelName("");
+      setShowCreateChannel(false);
+    } else {
+      console.error("Failed to create channel:", data);
+    }
+  } catch (err) {
+    console.error("Error creating channel:", err);
+  } finally {
+    setLoading(false);
+  }
+};
   const deleteChannel = async (id: string) => {};
 
   // RENDER 

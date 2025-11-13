@@ -5,7 +5,7 @@ import { db, myTable } from "../data/db.js";
 import type { ErrorResponse, OperationResult, SuccessResponse, IdParam, GetResult } from "../data/types.js"
 import { randomUUID } from "crypto";
 import { ChannelCreateSchema } from "../data/validation.js";
-
+import { verifyToken } from "../data/auth.js"
 
 const router: Router = express.Router()
 
@@ -128,69 +128,49 @@ router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<C
 })
 
 // Create new channel
-router.post("/", async (req: Request, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
-  // Validate input
-  const validationResult = ChannelCreateSchema.safeParse(req.body)
+router.post("/", async (req: Request, res: Response) => {
+  const { name, ownerId, Guest } = req.body;
 
-  if (!validationResult.success) {
-    const errors = validationResult.error.issues.map((err) => ({
-      field: err.path.join("."),
-      message: err.message,
-    }))
-
+  if (!name || !ownerId) {
     return res.status(400).send({
       success: false,
-      message: "Invalid channel data",
-      error: errors,
-    })
+      message: "Missing required fields: name or ownerId",
+    });
   }
 
-  const { name, userId }: ChannelCreateInput = validationResult.data
-
-  // TODO: Get userId from authentication middleware instead of request body
-  if (!userId) {
-    return res.status(400).send({
-      success: false,
-      message: "userId is required",
-      error: "User authentication required",
-    })
-  }
+  const id = randomUUID();
+  const newChannel = {
+    pk: "CHANNELS",
+    sk: `CHANNEL#${id}`,
+    id,
+    name,
+    ownerId,
+    Guest: Guest ?? false,
+    createdAt: new Date().toISOString(),
+  };
 
   try {
-    // Generate unique channel ID
-    const channelId = generateChannelId()
-
-    // Create channel object
-    const newChannel: Channel = {
-      pk: "CHANNELS",
-      sk: `CHANNEL#${channelId}`,
-      name,
-      owner: `USER#${userId}`,
-    }
-
-    // Save to database
     await db.send(
       new PutCommand({
         TableName: myTable,
         Item: newChannel,
-        ConditionExpression: "attribute_not_exists(sk)",
       })
-    )
+    );
 
     res.status(201).send({
       success: true,
       message: "Channel created successfully",
-      item: toChannelResponse(newChannel),
-    })
+      item: newChannel,
+    });
   } catch (error) {
-    console.error("Error creating channel:", error)
+    console.error("Error creating channel:", error);
     res.status(500).send({
       success: false,
+      message: "Could not create channel",
       error: (error as Error).message,
-      message: "Failed to create channel",
-    })
+    });
   }
-})
+});
 
 // Delete channel
 router.delete("/:id", async (req: Request<IdParam>, res: Response<OperationResult<ChannelResponse> | ErrorResponse>) => {
