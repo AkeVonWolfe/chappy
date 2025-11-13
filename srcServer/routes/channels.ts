@@ -9,7 +9,7 @@ import { verifyToken } from "../data/auth.js"
 
 const router: Router = express.Router()
 
-
+// interface
 interface Channel {
   pk: string
   sk: string
@@ -40,17 +40,17 @@ function generateChannelId(): string {
 router.get("/", async (req, res: Response<SuccessResponse<ChannelResponse> | ErrorResponse>) => {
   try {
     const result: GetResult = await db.send(
-      new QueryCommand({
+      new QueryCommand({  // query all channels
         TableName: myTable,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)", // partition key and sort key condition 
         ExpressionAttributeValues: {
-          ":pk": "CHANNELS",
-          ":skPrefix": "CHANNEL#",
+          ":pk": "CHANNELS",  // Partition key for channels
+          ":skPrefix": "CHANNEL#",  // Sort key prefix for channels
         },
       })
     );
 
-    interface DBItem {
+    interface DBItem {  // raw DB item interface for types 
       pk: string;
       sk: string;
       name?: string;
@@ -58,12 +58,11 @@ router.get("/", async (req, res: Response<SuccessResponse<ChannelResponse> | Err
       [key: string]: unknown;
     }
 
-    const rawItems: DBItem[] = (result.Items ?? []) as DBItem[];
+    const rawItems: DBItem[] = (result.Items ?? []) as DBItem[];  // cast to DBItem array
 
-    const channels = (rawItems
-      .map((item: DBItem) => toChannelResponse(item as Channel))
-      .filter((ch) => ch !== null)) as ChannelResponse[];
-
+    const channels = (rawItems  
+      .map((item: DBItem) => toChannelResponse(item as Channel))  // convert to ChannelResponse
+      .filter((ch) => ch !== null)) as ChannelResponse[];  // filter out nulls
     res.status(200).send({
       success: true,
       count: channels.length,
@@ -80,17 +79,17 @@ router.get("/", async (req, res: Response<SuccessResponse<ChannelResponse> | Err
 });
 
 // Helper to convert DB item to ChannelResponse
-function toChannelResponse(item: any): ChannelResponse | null {
-  if (!item || !item.sk) {
+function toChannelResponse(item: any): ChannelResponse | null {  
+  if (!item || !item.sk) {  
     console.warn("Skipping invalid channel item:", item);
     return null;
   }
 
   return {
-    id: (item.sk || "").replace("CHANNEL#", ""),
-    name: item.name || "Unnamed channel",
-    ownerId: item.ownerId || "unknown",
-    Guest: item.Guest ?? false,
+    id: (item.sk || "").replace("CHANNEL#", ""),  // extract ID from sort key
+    name: item.name || "Unnamed channel",  // default name if missing
+    ownerId: item.ownerId || "unknown",  // default owner if missing
+    Guest: item.Guest ?? false, // default Guest to false if missing
   };
 }
 // get channel by id
@@ -102,15 +101,15 @@ router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<C
       new GetCommand({
         TableName: myTable,
         Key: {
-          pk: "CHANNELS",
-          sk: `CHANNEL#${channelId}`,
+          pk: "CHANNELS",  // partition key for channels
+          sk: `CHANNEL#${channelId}`, // sort key for specific channel
         },
       })
     );
 
-    const channel: Channel | undefined = result.Item as Channel | undefined;
+    const channel: Channel | undefined = result.Item as Channel | undefined;  // cast to Channel or undefined
 
-    if (!channel) {
+    if (!channel) {  // channel not found
       return res.status(404).send({
         success: false,
         error: "Channel not found",
@@ -118,9 +117,9 @@ router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<C
       });
     }
 
-    const formattedChannel = toChannelResponse(channel);
+    const formattedChannel = toChannelResponse(channel);  // convert to ChannelResponse
 
-    if (!formattedChannel) {
+    if (!formattedChannel) {  // invalid channel format
       return res.status(500).send({
         success: false,
         error: "Invalid channel format",
@@ -146,31 +145,31 @@ router.get("/:id", async (req: Request<IdParam>, res: Response<OperationResult<C
 // Create new channel
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const authHeader = req.headers.authorization;  // get authorization header
+    if (!authHeader) {  // check if authorization header is missing
       return res.status(401).send({
         success: false,
         message: "Missing Authorization header",
       });
     }
 
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(401).send({
+    const token = authHeader.split(" ")[1];  // extract token from header
+    if (!token) {  // check if token is missing
+      return res.status(401).send({  
         success: false,
         message: "Missing token in Authorization header",
       });
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
+    const decoded = verifyToken(token);  // verify token
+    if (!decoded) {  // check if token is invalid
       return res.status(403).send({
         success: false,
         message: "Invalid or expired token",
       });
     }
 
-    const { name, Guest } = req.body;
+    const { name, Guest } = req.body;  // get name and Guest from request body
 
     if (!name) {
       return res.status(400).send({
@@ -179,20 +178,20 @@ router.post("/", async (req: Request, res: Response) => {
       });
     }
 
-    const id = randomUUID();
+    const id = randomUUID();  // generate unique channel ID
     const newChannel = {
-      pk: "CHANNELS",
-      sk: `CHANNEL#${id}`,
-      id,
-      name,
+      pk: "CHANNELS",  // partition key for channels
+      sk: `CHANNEL#${id}`,  // sort key with channel
+      id,  // unique channel ID
+      name,  // channel name
       ownerId: decoded.userId, // owner comes from JWT
-      Guest: Guest ?? false,
-      createdAt: new Date().toISOString(),
+      Guest: Guest ?? false,  // default Guest to false if missing
+      createdAt: new Date().toISOString(),  // timestamp of creation
     };
 
     await db.send(
-      new PutCommand({
-        TableName: myTable,
+      new PutCommand({  // put new channel item in DB
+        TableName: myTable,  
         Item: newChannel,
       })
     );
@@ -215,46 +214,46 @@ router.post("/", async (req: Request, res: Response) => {
 // Delete channel
 router.delete("/:id", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const authHeader = req.headers.authorization;  // get authorization header
+    if (!authHeader) {  // check if authorization header is missing
       return res.status(401).send({
         success: false,
         message: "Missing authorization header",
       });
     }
 
-    const token = authHeader?.split(" ")[1];
+    const token = authHeader?.split(" ")[1];  // extract token from header
 
-    if (!token) {
-      return res.status(401).send({
+    if (!token) {  // check if token is missing
+      return res.status(401).send({  
       success: false,
       message: "Missing or invalid authorization token",
   });
 }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
+    const decoded = verifyToken(token);  // verify token
+    if (!decoded) {  // check if token is invalid
       return res.status(403).send({
       success: false,
       message: "Invalid or expired token",
   });
 }
 
-    const channelId = req.params.id;
+    const channelId = req.params.id;  // get channel ID from params
 
     //  Fetch the channel to verify ownership
     const result = await db.send(
-      new GetCommand({
+      new GetCommand({  // get channel item from DB
         TableName: myTable,
         Key: {
-          pk: "CHANNELS",
-          sk: `CHANNEL#${channelId}`,
+          pk: "CHANNELS",  // partition key for channels
+          sk: `CHANNEL#${channelId}`,  // sort key for specific channel
         },
       })
     );
 
-    const channel = result.Item;
-    if (!channel) {
+    const channel = result.Item;  // fetched channel item
+    if (!channel) {  // channel not found
       return res.status(404).send({
         success: false,
         message: "Channel not found",
@@ -262,7 +261,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     //  Only owner can delete
-    if (channel.ownerId !== decoded.userId) {
+    if (channel.ownerId !== decoded.userId) {  // check ownership
       return res.status(403).send({
         success: false,
         message: "You are not authorized to delete this channel",
@@ -270,11 +269,11 @@ router.delete("/:id", async (req, res) => {
     }
 
     await db.send(
-      new DeleteCommand({
+      new DeleteCommand({  // delete channel item from DB
         TableName: myTable,
-        Key: {
-          pk: "CHANNELS",
-          sk: `CHANNEL#${channelId}`,
+        Key: {  
+          pk: "CHANNELS",  // partition key for channels
+          sk: `CHANNEL#${channelId}`,  // sort key for specific channel
         },
       })
     );

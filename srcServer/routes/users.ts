@@ -50,34 +50,34 @@ router.get("/", async (req, res: Response<SuccessResponse<User> | ErrorResponse>
 // DELETE user by id
 router.delete("/:userId", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    const authHeader = req.headers.authorization;  // get authorization header
+    if (!authHeader) {  // check if authorization header is missing
       return res.status(401).send({
         success: false,
         message: "Missing authorization header",
       });
     }
 
-    const token = authHeader.split(" ")[1];
-    if (!token) {
+    const token = authHeader.split(" ")[1];  // extract token from "Bearer <token>"
+    if (!token) {  // check if token is missing
       return res.status(401).send({
         success: false,
         message: "Invalid token format",
       });
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
+    const decoded = verifyToken(token);  // verify token
+    if (!decoded) {  // invalid token
       return res.status(403).send({
         success: false,
         message: "Invalid or expired token",
       });
     }
 
-    const { userId } = req.params;
+    const { userId } = req.params;  // get userId from params
 
     //  Only allow deleting own account
-    if (decoded.userId !== userId) {
+    if (decoded.userId !== userId) {  // check if user is authorized to delete this account
       return res.status(403).send({
         success: false,
         message: "You are not authorized to delete this account",
@@ -89,13 +89,13 @@ router.delete("/:userId", async (req, res) => {
       new GetCommand({
         TableName: myTable,
         Key: {
-          pk: "USERS",
-          sk: `USER#${userId}`,
+          pk: "USERS",  // partition key for users
+          sk: `USER#${userId}`,  // sort key for specific user
         },
       })
     );
 
-    if (!result.Item) {
+    if (!result.Item) {  // user not found
       return res.status(404).send({
         success: false,
         message: "User not found",
@@ -104,11 +104,11 @@ router.delete("/:userId", async (req, res) => {
 
     //  Delete user
     await db.send(
-      new DeleteCommand({
+      new DeleteCommand({  // delete user item from DB
         TableName: myTable,
         Key: {
-          pk: "USERS",
-          sk: `USER#${userId}`,
+          pk: "USERS",  // partition key for users
+          sk: `USER#${userId}`,  // sort key for specific user
         },
       })
     );
@@ -133,7 +133,7 @@ router.delete("/:userId", async (req, res) => {
 router.post("/login", async (req: Request, res: Response<LoginResponse<User> | ErrorResponse>) => {
   const { name, password } = req.body;
 
-  if (!name || !password) {
+  if (!name || !password) {  // validate input
     return res.status(400).send({
       success: false,
       error: "Name and password are required",
@@ -146,22 +146,22 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
     const result = await db.send(
       new QueryCommand({
         TableName: myTable,
-        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
-        FilterExpression: "#name = :nameVal",
-        ExpressionAttributeNames: {
-          "#name": "name",
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",  // query by pk and sk prefix
+        FilterExpression: "#name = :nameVal",  // filter by name
+        ExpressionAttributeNames: {  
+          "#name": "name",  // attribute name mapping
         },
-        ExpressionAttributeValues: {
-          ":pk": "USERS",
-          ":skPrefix": "USER#",
-          ":nameVal": name,
+        ExpressionAttributeValues: {  // attribute values for query
+          ":pk": "USERS",  // partition key for users
+          ":skPrefix": "USER#",  // sort key prefix for users
+          ":nameVal": name,   // name to check
         },
       })
     );
 
-    const user = result.Items && result.Items[0];
-
-    if (!user) {
+    const user = result.Items && result.Items[0];  // get the first matching user
+ 
+    if (!user) {  // user not found
       return res.status(404).send({
         success: false,
         error: "User not found",
@@ -170,8 +170,8 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
     }
 
     // Compare password using bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);  // compare hashed passwords
+    if (!isPasswordValid) {  // invalid password
       return res.status(401).send({
         success: false,
         error: "Invalid credentials",
@@ -180,9 +180,9 @@ router.post("/login", async (req: Request, res: Response<LoginResponse<User> | E
     }
 
     //Extract user ID from SK
-    const cleanId = user.sk.startsWith("USER#") ? user.sk.replace("USER#", "") : user.sk;
+    const cleanId = user.sk.startsWith("USER#") ? user.sk.replace("USER#", "") : user.sk;  // clean user ID
 
-    const token = createToken({
+    const token = createToken({  // create JWT token
       userId: cleanId,
       name: user.name,
     });

@@ -67,12 +67,12 @@
   padding: 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  background: #f9fafb;
+  background: #1a1a1a;
   font-weight: 500;
 }
 
 .create-toggle-btn:hover {
-  background: #f3f4f6;
+  background: #202329;
 }
 
 /* Chat area */

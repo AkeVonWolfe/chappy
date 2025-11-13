@@ -28,7 +28,7 @@ interface MessageItem {
 router.get("/:channelId", async (req, res: Response) => {
   const { channelId } = req.params;
 
-  if (!channelId) {
+  if (!channelId) { // validate channelId
     return res.status(400).json({
       success: false,
       message: "Channel ID is required",
@@ -39,14 +39,14 @@ router.get("/:channelId", async (req, res: Response) => {
     const result = await db.send(
       new ScanCommand({
         TableName: myTable,
-        FilterExpression: "channelId = :channelId",
-        ExpressionAttributeValues: {
-          ":channelId": channelId,
+        FilterExpression: "channelId = :channelId", // filter by channelId
+        ExpressionAttributeValues: { 
+          ":channelId": channelId,  // value for filter
         },
       })
     );
 
-    res.status(200).json({
+    res.status(200).json({      
       success: true,
       count: result.Count ?? 0,
       items: result.Items ?? [],
@@ -63,81 +63,81 @@ router.get("/:channelId", async (req, res: Response) => {
 
 // GET all messages sent BY a specific user
 // Route: /messages/user/:userId/sent
-router.get("/user/:userId/sent", async (
-    req: Request<{ userId: string }>, 
-    res: Response<SuccessResponse<MessageItem> | ErrorResponse>
-) => {
-    const { userId } = req.params
+// router.get("/user/:userId/sent", async (
+//     req: Request<{ userId: string }>, 
+//     res: Response<SuccessResponse<MessageItem> | ErrorResponse>
+// ) => {
+//     const { userId } = req.params
     
-    try {
-        // Query messages sent BY this user (uses primary key)
-        const result = await db.send(
-            new QueryCommand({
-                TableName: myTable,
-                KeyConditionExpression: "pk = :pk",
-                ExpressionAttributeValues: {
-                    ":pk": `MESSAGE#USER#${userId}`
-                },
-                ScanIndexForward: true
-            })
-        )
+//     try {
+//         // Query messages sent BY this user (uses primary key)
+//         const result = await db.send(
+//             new QueryCommand({
+//                 TableName: myTable,
+//                 KeyConditionExpression: "pk = :pk",
+//                 ExpressionAttributeValues: {
+//                     ":pk": `MESSAGE#USER#${userId}`
+//                 },
+//                 ScanIndexForward: true
+//             })
+//         )
         
-        const messages = (result.Items || []) as MessageItem[]
+//         const messages = (result.Items || []) as MessageItem[]
         
-        res.status(200).send({
-            success: true,
-            count: messages.length,
-            items: messages
-        })
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            error: (error as Error).message,
-            message: "Could not retrieve sent messages"
-        })
-    }
-})
+//         res.status(200).send({
+//             success: true,
+//             count: messages.length,
+//             items: messages
+//         })
+//     } catch (error) {
+//         res.status(500).send({
+//             success: false,
+//             error: (error as Error).message,
+//             message: "Could not retrieve sent messages"
+//         })
+//     }
+// })
 
 // GET all direct messages between two users
 // Route: /messages/direct/:userA/:userB
 // GET all direct messages between two users
 router.get("/direct/:userA/:userB", async (req, res) => {
-  const { userA, userB } = req.params;
+  const { userA, userB } = req.params;      
 
   try {
-    // Normalize IDs: remove or add USER# prefix if needed
-    const normalize = (id: string) => id.replace(/^USER#/, "");
-    const a = normalize(userA);
-    const b = normalize(userB);
+    // Normalize IDs remove or add USER# prefix if needed
+    const normalize = (id: string) => id.replace(/^USER#/, "");   // remove prefix if exists
+    const a = normalize(userA); // normalize userA ID
+    const b = normalize(userB); // normalize userB ID
 
-    const [fromAtoB, fromBtoA] = await Promise.all([
+    const [fromAtoB, fromBtoA] = await Promise.all([ // fetch messages in both directions
       db.send(
         new QueryCommand({
           TableName: myTable,
-          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",  // query by pk and sk prefix
           ExpressionAttributeValues: {
-            ":pk": `MESSAGE#USER#${a}`,
-            ":skPrefix": `USER#${b}`,
+            ":pk": `MESSAGE#USER#${a}`,  // messages sent by userA
+            ":skPrefix": `USER#${b}`,    // messages to userB
           },
         })
       ),
       db.send(
         new QueryCommand({
           TableName: myTable,
-          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",  // query by pk and sk prefix
           ExpressionAttributeValues: {
-            ":pk": `MESSAGE#USER#${b}`,
-            ":skPrefix": `USER#${a}`,
+            ":pk": `MESSAGE#USER#${b}`,  // messages sent by userB
+            ":skPrefix": `USER#${a}`,  // messages to userA
           },
         })
       ),
     ]);
 
-    const allMessages = [
-      ...(fromAtoB.Items ?? []),
-      ...(fromBtoA.Items ?? []),
+    const allMessages = [  // combine and sort messages from both users
+      ...(fromAtoB.Items ?? []),  // messages from A to B
+      ...(fromBtoA.Items ?? []), // messages from B to A
     ].sort((a, b) =>
-      a.timestamp > b.timestamp ? 1 : a.timestamp < b.timestamp ? -1 : 0
+      a.timestamp > b.timestamp ? 1 : a.timestamp < b.timestamp ? -1 : 0  // sort by timestamp ascending
     );
 
     res.status(200).send({
@@ -163,27 +163,27 @@ router.post("/:channelId", async (req, res) => {
   const { channelId } = req.params;
   const { message, senderId } = req.body;
 
-  if (!message || !senderId) {
+  if (!message || !senderId) {  // validate input
     return res.status(400).send({
       success: false,
       message: "Message and senderId are required",
     });
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date().toISOString();  // current timestamp
 
-  const newMessage = {
-    pk: `MESSAGE#CHANNEL#${channelId}`,
-    sk: `MESSAGE#${timestamp}`,
-    message,
-    senderId,
-    channelId,
-    timestamp,
+  const newMessage = {  // new message object
+    pk: `MESSAGE#CHANNEL#${channelId}`,  // partition key for channel messages
+    sk: `MESSAGE#${timestamp}`,    // sort key with timestamp
+    message,  // message content
+    senderId,  // sender user ID
+    channelId,  // channel ID
+    timestamp,  // message timestamp
   };
 
   try {
     await db.send(
-      new PutCommand({
+      new PutCommand({   // save new message to DB
         TableName: myTable,
         Item: newMessage,
       })
@@ -211,27 +211,27 @@ router.post("/direct/:senderId/:recipientId", async (req, res) => {
   const { senderId, recipientId } = req.params;
   const { message } = req.body;
 
-  if (!message || !senderId || !recipientId) {
+  if (!message || !senderId || !recipientId) {  // validate input
     return res.status(400).send({
       success: false,
       message: "Message, senderId and recipientId are required",
     });
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date().toISOString();  // current timestamp
 
-  const newMessage = {
-    pk: `MESSAGE#USER#${senderId}`,
-    sk: `USER#${recipientId}#${timestamp}`,
-    message,
-    senderId,
-    recipientId,
-    timestamp,
+  const newMessage = {  // new direct message object
+    pk: `MESSAGE#USER#${senderId}`,  // partition key for sender
+    sk: `USER#${recipientId}#${timestamp}`,  // sort key with recipient and timestamp
+    message,  // message content
+    senderId,  // sender user ID
+    recipientId,  // recipient user ID
+    timestamp,  // message timestamp
   };
 
   try {
     await db.send(
-      new PutCommand({
+      new PutCommand({  // save new direct message to DB
         TableName: myTable,
         Item: newMessage,
       })
