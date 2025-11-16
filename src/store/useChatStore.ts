@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { Channel, Message, User } from "../types";
 
+// TODO: Refactor lifting state to Zustand store aka everything in components
+
 interface ChatState {
   currentUser: User;
   channels: Channel[];
