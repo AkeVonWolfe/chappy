@@ -3,6 +3,7 @@ import "../App.css";
 import Sidebar from "./sidebar";
 import ChatArea from "./chatArea";
 import type { Channel, Message, User } from "../types";
+import { api } from "../api";
 
 
 
@@ -37,7 +38,7 @@ export default function ChatApp(): React.ReactElement {
   const fetchChannels = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:1337/channels");
+      const res = await fetch(api("/channels"));
       const data = await res.json();
 
       if (data.success && Array.isArray(data.items)) {  // valid data
@@ -57,7 +58,7 @@ export default function ChatApp(): React.ReactElement {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");  // get auth token from storage
-      const res = await fetch("http://localhost:1337/users", {
+      const res = await fetch(api("/users"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -76,7 +77,7 @@ export default function ChatApp(): React.ReactElement {
   const fetchMessages = async (channelId: string) => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:1337/messages/${channelId}`); // fetch messages for channel
+      const res = await fetch(api(`/messages/${channelId}`)); // fetch messages for channel
       const data = await res.json();
 
       if (data.success && Array.isArray(data.items)) {
@@ -98,7 +99,7 @@ export default function ChatApp(): React.ReactElement {
       setLoading(true);
     const currentId = CURRENT_USER.userId || CURRENT_USER.id;
     console.log(" Fetching DMs for:", { currentId, targetId });
-    const url = `http://localhost:1337/messages/direct/${currentId}/${targetId}`;  // fetch direct messages for DM
+    const url = api(`/messages/direct/${currentId}/${targetId}`);  // fetch direct messages for DM
     console.log(" GET", url);
 
     const res = await fetch(url);
@@ -150,10 +151,10 @@ export default function ChatApp(): React.ReactElement {
     if (isDirectChat && selectedUser) {   // Direct message
         const cleanTargetId = (selectedUser.sk || selectedUser.id || "").replace("USER#", "");  // clean target user ID
         const senderId = CURRENT_USER.userId || CURRENT_USER.id;   // get sender ID
-      endpoint = `http://localhost:1337/messages/direct/${senderId}/${cleanTargetId}`;
+      endpoint = api(`/messages/direct/${senderId}/${cleanTargetId}`);
     } else if (selectedChannel) {
       // Channel message 
-      endpoint = `http://localhost:1337/messages/${selectedChannel.id}`;
+      endpoint = api(`/messages/${selectedChannel.id}`);
     } else {
       console.warn("No target channel or user selected");
       return;
@@ -203,7 +204,7 @@ export default function ChatApp(): React.ReactElement {
 
   try {
     setLoading(true);  // show loading state
-    const res = await fetch("http://localhost:1337/channels", {  
+    const res = await fetch(api("/channels"), {  
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -241,7 +242,7 @@ export default function ChatApp(): React.ReactElement {
 
   try {
     setLoading(true); // show loading state
-    const res = await fetch(`http://localhost:1337/channels/${id}`, {
+    const res = await fetch(api(`/channels/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,

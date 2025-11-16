@@ -18,7 +18,10 @@ const app: Express = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", process.env.FRONTEND_URL].filter(Boolean) as string[],
+    origin: [
+      "http://localhost:5173",
+      process.env.VITE_API_URL
+    ].filter(Boolean) as string[],
     credentials: true,
   })
 );

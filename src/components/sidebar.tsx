@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { Channel, User } from "../types";
+import { api } from "../api";
 
 
 // Props interface for Sidebar component
@@ -160,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
 
     try {
-      const res = await fetch(`http://localhost:1337/users/${userId}`, {
+      const res = await fetch(api(`/users/${userId}`), {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -1,6 +1,7 @@
 import  { useState } from "react";
 import "./login.css";
 import { useNavigate } from "react-router";
+import { api } from "../api";
 
 
 // Registration component
@@ -18,7 +19,7 @@ const Register = () => {
 
     try {
       setLoading(true); // set loading state
-      const res = await fetch("http://localhost:1337/register/register", {
+      const res = await fetch(api("/register/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, password }),

@@ -1,6 +1,7 @@
 import  { useState } from "react";
 import "./login.css";
 import { useNavigate } from "react-router";
+import { api } from "../api";
 
 const Login = () => {
 
@@ -18,7 +19,7 @@ const Login = () => {
 
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:1337/users/login", {
+      const res = await fetch(api("/users/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, password }),
