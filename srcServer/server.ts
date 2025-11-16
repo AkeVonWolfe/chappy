@@ -18,10 +18,9 @@ const app: Express = express();
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      process.env.VITE_API_URL
-    ].filter(Boolean) as string[],
+    origin: (origin, callback) => {
+      callback(null, origin || "*");  // allow whichever origin is calling
+    },
     credentials: true,
   })
 );
