@@ -73,10 +73,6 @@ npm run dev
 npm run restart-server
 ````
 
-## Resources
-
-React, React-Dom, Express, Cors, JWT, Bcrypt, AWS SDK, DynamoDB, Zod
-
 ## Authors
 
 Developed by 
