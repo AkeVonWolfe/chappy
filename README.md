@@ -1,61 +1,84 @@
-Chappy
+# Chappy
 
-Chappy is a fullstack Chat-app, where a user can register them self as well as send private and public messages via DM or private and public channels,
-The app is built with React, Typescript, Express, Cors, Bcrypt, react-dom, Zod AWS DynamoDb and JWT-Token,
+Chappy is a full-stack real-time chat application where users can:
 
+- Register an account
+- Delete their own account
+- enter chat as guest with limited access
+- Join or create **public** and **private channels**
+- Delete their own channels  
+- Send **direct (DM) messages**  
+- Communicate through a clean, modern UI  
 
-## Getting Started
+The project is built using:
 
-Try it out Here! : 
+**React**, **TypeScript**, **Express**, **AWS DynamoDB**, **Zod**,  
+**Bcrypt**, **JWT**, **CORS**, **React DOM**, and **Vite**.
 
-https://chappy-1t1l.onrender.com/
+---
 
-## Endpoints
+##  Live Demo
 
-| Resource    | Description                |
-| ----------- | -------------------------- |
-| `/register`     | Create users               |
-| `/users`        | Manage users               |
-| `/channels`     | Manage channels            |
-| `/messages`     | Manage messages            |
+Try the deployed version here:
 
+ **https://chappy-1t1l.onrender.com/**
 
-##  Setup and Run Locally
- ```bash
+---
+
+## 📡 API Endpoints
+
+| Route                               | Description                    |
+|-------------------------------------|--------------------------------|
+| `POST /register`                    | Register a new user            |
+| `GET /users`                        | Fetch all users                |
+| `DELETE /users/:id`                 | Delete a user (requires token) |
+| `GET /channels`                     | Fetch all channels             |
+| `POST /channels`                    | Create a channel               |
+| `GET /messages/:channelId`          | Fetch messages for a channel   |
+| `GET /messages/direct/:from/:to`    | Fetch direct messages          |
+
+---
+
+## 🛠️ Run Locally
+
+### 1. Clone the repository
+
+```bash
 git clone https://github.com/AkeVonWolfe/chappy.git
 cd chappy
+````
 
-```
-Install Dependecies
+### 2. Install dependencies
+
 ```bash
 npm install
-```
+````
+### 3. Environment Variables AKA .env 
+.env can be sent on request please contant me 94.andreas.svensson@gmail.com 
 
-Set Up Environment Variables
-The Env file can be sent on request
-Create a .env file in the root directory and configure the following:
-
-```bash
-PUBLIC_KEY=SECRET
-SECRET_KEY=SECRET
-JWT_SECRET=SECRET
+PUBLIC_KEY=yourAWSKey
+SECRET_KEY=yourAWSSecret
+JWT_SECRET=yourJWTSecret
 PORT=3000
-````
 
-Build and Run The Server
+### 4. Start development server
 
-```bash
-npm run restart
-
-````
-
-Run the local development server
 ```bash
 npm run dev
-
 ````
+
+### 5. Build & run the backend
+
+```bash
+npm run restart-server
+````
+
+## Resources
+
+React, React-Dom, Express, Cors, JWT, Bcrypt, AWS SDK, DynamoDB, Zod
 
 ## Authors
 
 Developed by 
  GitHub: [AkeVonWolfe](https://github.com/AkeVonWolfe)
+
