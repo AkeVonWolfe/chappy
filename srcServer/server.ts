@@ -48,10 +48,11 @@ app.use("/messages", messagesRouter);
 const frontendPath = path.join(__dirname, "..", "dist");
 
 
+// Serve frontend
 app.use(express.static(frontendPath));
 
-
-app.get("*", (req, res) => {
+// Fallback for React Router
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
