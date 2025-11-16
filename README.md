@@ -3,13 +3,12 @@ Chappy
 Chappy is a fullstack Chat-app, where a user can register them self as well as send private and public messages via DM or private and public channels,
 The app is built with React, Typescript, Express, Cors, Bcrypt, react-dom, Zod AWS DynamoDb and JWT-Token,
 
-Base URL for local Development
 
-http://localhost:5173
+## Getting Started
 
-Base URL for local Server
+Try it out Here! : 
 
-http://localhost:1337
+https://chappy-1t1l.onrender.com/
 
 ## Endpoints
 
@@ -23,8 +22,9 @@ http://localhost:1337
 
 ##  Setup and Run Locally
  ```bash
-git clone https://github.com/yourusername/electronic-store-api.git
-cd electronic-store-api
+git clone https://github.com/AkeVonWolfe/chappy.git
+cd chappy
+
 ```
 Install Dependecies
 ```bash
@@ -32,14 +32,15 @@ npm install
 ```
 
 Set Up Environment Variables
+The Env file can be sent on request
 Create a .env file in the root directory and configure the following:
 
 ```bash
-PORT=2474
-PUBLIC_KEY=your-access-key-id
-SECRET_KEY=your-secret-access-key
+PUBLIC_KEY=SECRET
+SECRET_KEY=SECRET
+JWT_SECRET=SECRET
+PORT=3000
 ````
-The Api key will be sent out when requested.
 
 Build and Run The Server
 
@@ -50,16 +51,9 @@ npm run restart
 
 Run the local development server
 ```bash
-npm run restart
+npm run dev
 
 ````
-
-
-## Getting Started
-
-You can use tools like Insomnia, Postman, or any HTTP client library (e.g. axios, fetch) to interact with the API
-Or you can use the React UI to.
-
 
 ## Authors
 
